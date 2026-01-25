@@ -1,5 +1,4 @@
 //user-service
-
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
@@ -9,7 +8,7 @@ let Schema = mongoose.Schema;
 
 let userSchema = new Schema(
   {
-    userName: { type: String, unique: true },
+    userName: String,
     password: String,
     email: { type: String, unique: true },
     points_balance: { type: Number, default: 0 },
@@ -53,8 +52,12 @@ module.exports.registerUser = function (userData) {
         .hash(userData.password, 10)
         .then((hash) => {
           userData.password = hash;
+          userName = userData.email.split("@")[0];
+          if (username.includes("+")) {
+            userName = userName.split("+")[0];
+          }
           let newUser = new User({
-            userName: userData.userName,
+            userName: userName,
             email: userData.email,
             password: userData.password,
           });
@@ -62,7 +65,7 @@ module.exports.registerUser = function (userData) {
           newUser
             .save()
             .then(() => {
-              resolve("User " + userData.userName + " successfully registered");
+              resolve("User " + userName + " successfully registered");
             })
             .catch((err) => {
               if (err.code == 11000) {
