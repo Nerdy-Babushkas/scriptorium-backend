@@ -53,7 +53,7 @@ module.exports.registerUser = function (userData) {
         .then((hash) => {
           userData.password = hash;
           userName = userData.email.split("@")[0];
-          if (username.includes("+")) {
+          if (userName.includes("+")) {
             userName = userName.split("+")[0];
           }
           let newUser = new User({
@@ -69,7 +69,7 @@ module.exports.registerUser = function (userData) {
             })
             .catch((err) => {
               if (err.code == 11000) {
-                reject("User Name already taken");
+                reject("email already registered");
               } else {
                 reject("There was an error creating the user: " + err);
               }
