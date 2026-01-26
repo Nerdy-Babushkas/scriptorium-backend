@@ -68,15 +68,19 @@ module.exports.registerUser = function (userData) {
         });
       }
 
+      // Hash the password
       const hash = await bcrypt.hash(userData.password, 10);
-      const userName = userData.email.split("@")[0].split("+")[0];
+
+      // Normalize email and username
+      const email = userData.email.toLowerCase();
+      let userName = email.split("@")[0].split("+")[0];
 
       const verificationToken = crypto.randomBytes(32).toString("hex");
       const verificationTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
 
       const newUser = new User({
         userName,
-        email: userData.email,
+        email,
         password: hash,
         authProvider: "local",
         isVerified: false,
@@ -130,22 +134,16 @@ module.exports.verifyEmail = async function (token) {
 module.exports.checkUser = function (userData) {
   return new Promise(async (resolve, reject) => {
     try {
+      userData.email = userData.email.toLowerCase();
       console.log("🔍 Login attempt:", userData.email);
 
       const user = await User.findOne({ email: userData.email });
       if (!user) {
-        console.log("❌ User not found");
         return reject({
           code: "NOT_FOUND",
           message: "User not found",
         });
       }
-
-      console.log("✅ User found:", {
-        email: user.email,
-        isVerified: user.isVerified,
-        authProvider: user.authProvider,
-      });
 
       if (user.authProvider !== "local") {
         return reject({
@@ -155,23 +153,20 @@ module.exports.checkUser = function (userData) {
         });
       }
 
+      const isMatch = await bcrypt.compare(userData.password, user.password);
+      if (!isMatch) {
+        return reject({
+          code: "BAD_PASSWORD",
+          message: "Incorrect password",
+        });
+      }
+
       if (!user.isVerified) {
-        console.log("📧 User not verified");
         return reject({
           code: "NOT_VERIFIED",
           message: "Email not verified. We’ve re-sent the verification email.",
           userId: user._id,
           email: user.email,
-        });
-      }
-
-      const isMatch = await bcrypt.compare(userData.password, user.password);
-      console.log("🔑 Password match:", isMatch);
-
-      if (!isMatch) {
-        return reject({
-          code: "BAD_PASSWORD",
-          message: "Incorrect password",
         });
       }
 
