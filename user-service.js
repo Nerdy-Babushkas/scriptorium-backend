@@ -52,6 +52,7 @@ module.exports.registerUser = function (userData) {
         .hash(userData.password, 10)
         .then((hash) => {
           userData.password = hash;
+          userData.email = userData.email.toLowerCase();
           userName = userData.email.split("@")[0];
           if (userName.includes("+")) {
             userName = userName.split("+")[0];
@@ -83,6 +84,7 @@ module.exports.registerUser = function (userData) {
 module.exports.checkUser = function (userData) {
   return new Promise(function (resolve, reject) {
     // Find the user by email instead of username
+    userData.email = userData.email.toLowerCase();
     User.findOne({ email: userData.email })
       .then((user) => {
         if (!user) {
@@ -95,7 +97,6 @@ module.exports.checkUser = function (userData) {
             if (!isMatch) {
               return reject("Incorrect password for email " + userData.email);
             }
-
             user.last_login = new Date();
 
             return user.save().then(() => resolve(user));
