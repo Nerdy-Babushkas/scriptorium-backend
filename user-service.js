@@ -1,6 +1,7 @@
 //user-service
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const crypto = require("node:crypto");
 
 let mongoDBConnectionString = process.env.MONGO_URL;
 

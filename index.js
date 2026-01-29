@@ -7,8 +7,10 @@ const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const passportJWT = require("passport-jwt");
 const dotenv = require("dotenv");
+const crypto = require("node:crypto");
 
 dotenv.config();
+const nodemailer = require("nodemailer");
 const userService = require("./user-service.js");
 
 const HTTP_PORT = process.env.PORT || 8080;
@@ -42,32 +44,71 @@ app.get("/", (req, res) => {
   res.status(200).json({ status: "Scriptorium's UsersAPI health check ok" });
 });
 
-app.post("/api/user/register", (req, res) => {
-  userService
-    .registerUser(req.body)
-    .then((msg) => {
-      res.json({ message: msg });
-    })
-    .catch((msg) => {
-      res.status(422).json({ message: msg });
+// --- LOCAL REGISTRATION ---
+app.post("/api/user/register", async (req, res) => {
+  try {
+    const { verificationToken, userEmail, message } =
+      await userService.registerUser(req.body);
+
+    // Send verification email
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
     });
+
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+    await transporter.sendMail({
+      from: `"Scriptorium" <${process.env.SMTP_USER}>`,
+      to: userEmail,
+      subject: "Verify your email",
+      html: `<p>Thank you for registering! Please verify your email by clicking the link below:</p>
+             <a href="${verificationLink}">Verify Email</a>`,
+    });
+
+    res.json({ message: message });
+  } catch (err) {
+    res.status(422).json({ message: err.toString() });
+  }
 });
 
-app.post("/api/user/login", (req, res) => {
-  userService
-    .checkUser(req.body)
-    .then((user) => {
-      let payload = {
-        _id: user._id,
-        userName: user.userName,
-        email: user.email,
-      };
-      let token = jwt.sign(payload, jwtOptions.secretOrKey);
-      res.json({ message: "login successful", token: token });
-    })
-    .catch((msg) => {
-      res.status(422).json({ message: msg });
+app.get("/api/user/verify", async (req, res) => {
+  const token = req.query.token;
+  try {
+    const user = await userService.verifyEmail(token);
+    res.json({ message: "Email successfully verified!", user: user.userName });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+app.post("/api/user/login", async (req, res) => {
+  try {
+    const user = await userService.checkUser(req.body);
+
+    const payload = {
+      _id: user._id,
+      userName: user.userName,
+      email: user.email,
+    };
+
+    const token = jwt.sign(payload, jwtOptions.secretOrKey, {
+      expiresIn: "1h",
     });
+
+    res.json({
+      message: "login successful",
+      token: token,
+    });
+  } catch (err) {
+    res.status(422).json({
+      message: err.message || "Login failed",
+    });
+  }
 });
 
 userService
