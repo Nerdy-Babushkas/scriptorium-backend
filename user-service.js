@@ -62,14 +62,16 @@ module.exports.registerUser = function (userData) {
           if (userName.includes("+")) {
             userName = userName.split("+")[0];
           }
+
           const verificationToken = crypto.randomBytes(32).toString("hex");
           const verificationTokenExpires = new Date(
             Date.now() + 60 * 60 * 1000,
           );
+
           let newUser = new User({
             userName: userName,
             email: userData.email,
-            password: userData.password,
+            password: hash,
           });
 
           newUser
