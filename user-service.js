@@ -11,6 +11,12 @@ let userSchema = new Schema(
     userName: String,
     password: String,
     email: { type: String, unique: true },
+
+    // Email verification
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String, default: null },
+    verificationTokenExpires: { type: Date, default: null },
+
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
     goals: { type: [Object], default: [] },
@@ -56,6 +62,10 @@ module.exports.registerUser = function (userData) {
           if (userName.includes("+")) {
             userName = userName.split("+")[0];
           }
+          const verificationToken = crypto.randomBytes(32).toString("hex");
+          const verificationTokenExpires = new Date(
+            Date.now() + 60 * 60 * 1000,
+          );
           let newUser = new User({
             userName: userName,
             email: userData.email,
