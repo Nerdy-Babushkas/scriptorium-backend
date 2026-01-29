@@ -72,12 +72,19 @@ module.exports.registerUser = function (userData) {
             userName: userName,
             email: userData.email,
             password: hash,
+            isVerified: false,
+            verificationToken: verificationToken,
+            verificationTokenExpires: verificationTokenExpires,
           });
 
           newUser
             .save()
             .then(() => {
-              resolve("User " + userName + " successfully registered");
+              resolve({
+                message: "User " + userName + " successfully registered",
+                verificationToken: verificationToken,
+                userEmail: userData.email,
+              });
             })
             .catch((err) => {
               if (err.code == 11000) {
@@ -90,6 +97,24 @@ module.exports.registerUser = function (userData) {
         .catch((err) => reject(err));
     }
   });
+};
+
+module.exports.verifyEmail = async function (token) {
+  const user = await User.findOne({
+    verificationToken: token,
+    verificationTokenExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new Error("Invalid or expired verification token");
+  }
+
+  user.isVerified = true;
+  user.verificationToken = null;
+  user.verificationTokenExpires = null;
+  await user.save();
+
+  return user;
 };
 
 module.exports.checkUser = function (userData) {
@@ -117,4 +142,14 @@ module.exports.checkUser = function (userData) {
         reject("Unable to find user with email " + userData.email);
       });
   });
+};
+
+module.exports.setVerificationToken = async function (userId, token) {
+  await User.updateOne(
+    { _id: userId },
+    {
+      verificationToken: token,
+      verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  );
 };
