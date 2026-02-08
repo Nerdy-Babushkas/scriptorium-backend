@@ -1,6 +1,7 @@
 //user-service
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const crypto = require("node:crypto");
 
 let mongoDBConnectionString = process.env.MONGO_URL;
 
@@ -11,6 +12,12 @@ let userSchema = new Schema(
     userName: String,
     password: String,
     email: { type: String, unique: true },
+
+    // Email verification
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String, default: null },
+    verificationTokenExpires: { type: Date, default: null },
+
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
     goals: { type: [Object], default: [] },
@@ -56,16 +63,29 @@ module.exports.registerUser = function (userData) {
           if (userName.includes("+")) {
             userName = userName.split("+")[0];
           }
+
+          const verificationToken = crypto.randomBytes(32).toString("hex");
+          const verificationTokenExpires = new Date(
+            Date.now() + 60 * 60 * 1000,
+          );
+
           let newUser = new User({
             userName: userName,
             email: userData.email,
-            password: userData.password,
+            password: hash,
+            isVerified: false,
+            verificationToken: verificationToken,
+            verificationTokenExpires: verificationTokenExpires,
           });
 
           newUser
             .save()
             .then(() => {
-              resolve("User " + userName + " successfully registered");
+              resolve({
+                message: "User " + userName + " successfully registered",
+                verificationToken: verificationToken,
+                userEmail: userData.email,
+              });
             })
             .catch((err) => {
               if (err.code == 11000) {
@@ -80,13 +100,34 @@ module.exports.registerUser = function (userData) {
   });
 };
 
+module.exports.verifyEmail = async function (token) {
+  const user = await User.findOne({
+    verificationToken: token,
+    verificationTokenExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new Error("Invalid or expired verification token");
+  }
+
+  user.isVerified = true;
+  user.verificationToken = null;
+  user.verificationTokenExpires = null;
+  await user.save();
+
+  return user;
+};
+
 module.exports.checkUser = function (userData) {
   return new Promise(function (resolve, reject) {
-    // Find the user by email instead of username
     User.findOne({ email: userData.email })
       .then((user) => {
         if (!user) {
           return reject("Unable to find user with email " + userData.email);
+        }
+
+        if (!user.isVerified) {
+          return reject(new Error("Email not verified"));
         }
 
         return bcrypt
@@ -97,7 +138,6 @@ module.exports.checkUser = function (userData) {
             }
 
             user.last_login = new Date();
-
             return user.save().then(() => resolve(user));
           });
       })
@@ -105,4 +145,14 @@ module.exports.checkUser = function (userData) {
         reject("Unable to find user with email " + userData.email);
       });
   });
+};
+
+module.exports.setVerificationToken = async function (userId, token) {
+  await User.updateOne(
+    { _id: userId },
+    {
+      verificationToken: token,
+      verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  );
 };
