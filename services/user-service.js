@@ -120,11 +120,14 @@ module.exports.verifyEmail = async function (token) {
 
 module.exports.checkUser = function (userData) {
   return new Promise(function (resolve, reject) {
-    // Find the user by email instead of username
     User.findOne({ email: userData.email })
       .then((user) => {
         if (!user) {
           return reject("Unable to find user with email " + userData.email);
+        }
+
+        if (!user.isVerified) {
+          return reject(new Error("Email not verified"));
         }
 
         return bcrypt
@@ -135,7 +138,6 @@ module.exports.checkUser = function (userData) {
             }
 
             user.last_login = new Date();
-
             return user.save().then(() => resolve(user));
           });
       })

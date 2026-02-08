@@ -7,11 +7,10 @@ const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const passportJWT = require("passport-jwt");
 const dotenv = require("dotenv");
-const crypto = require("node:crypto");
 
 dotenv.config();
-const nodemailer = require("nodemailer");
-const userService = require("./user-service.js");
+const emailService = require("./services/email-service");
+const userService = require("./services/user-service.js");
 
 const HTTP_PORT = process.env.PORT || 8080;
 
@@ -44,35 +43,19 @@ app.get("/", (req, res) => {
   res.status(200).json({ status: "Scriptorium's UsersAPI health check ok" });
 });
 
-// --- LOCAL REGISTRATION ---
 app.post("/api/user/register", async (req, res) => {
   try {
     const { verificationToken, userEmail, message } =
       await userService.registerUser(req.body);
 
-    // Send verification email
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-
-    await transporter.sendMail({
-      from: `"Scriptorium" <${process.env.SMTP_USER}>`,
+    await emailService.sendVerificationEmail({
       to: userEmail,
-      subject: "Verify your email",
-      html: `<p>Thank you for registering! Please verify your email by clicking the link below:</p>
-             <a href="${verificationLink}">Verify Email</a>`,
+      token: verificationToken,
     });
 
-    res.json({ message: message });
+    res.json({ message });
   } catch (err) {
-    res.status(422).json({ message: err.toString() });
+    res.status(422).json({ message: err.message || err });
   }
 });
 
