@@ -11,6 +11,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const emailService = require("./services/email-service");
 const userService = require("./services/user-service.js");
+const passwordResetService = require("./services/password-reset-service");
 
 const HTTP_PORT = process.env.PORT || 8080;
 
@@ -91,6 +92,33 @@ app.post("/api/user/login", async (req, res) => {
     res.status(422).json({
       message: err.message || "Login failed",
     });
+  }
+});
+
+app.post("/api/user/forgot-password", async (req, res) => {
+  try {
+    const result = await passwordResetService.requestPasswordReset(
+      req.body.email,
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+app.post("/api/user/reset-password", async (req, res) => {
+  try {
+    const { token, password, password2 } = req.body;
+
+    const result = await passwordResetService.resetPassword(
+      token,
+      password,
+      password2,
+    );
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 
