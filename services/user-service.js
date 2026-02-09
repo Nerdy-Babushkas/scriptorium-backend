@@ -18,6 +18,10 @@ let userSchema = new Schema(
     verificationToken: { type: String, default: null },
     verificationTokenExpires: { type: Date, default: null },
 
+    // Password reset
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
+
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
     goals: { type: [Object], default: [] },
@@ -155,4 +159,11 @@ module.exports.setVerificationToken = async function (userId, token) {
       verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
     },
   );
+};
+
+module.exports.getUserModel = function () {
+  if (!User) {
+    throw new Error("DB not connected yet");
+  }
+  return User;
 };

@@ -28,3 +28,21 @@ module.exports.sendVerificationEmail = async function ({ to, token }) {
     `,
   });
 };
+
+module.exports.sendPasswordResetEmail = async function ({ to, token }) {
+  const transporter = createTransporter();
+
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+  await transporter.sendMail({
+    from: `"Scriptorium" <${process.env.SMTP_USER}>`,
+    to,
+    subject: "Reset your password",
+    html: `
+      <p>You requested a password reset.</p>
+      <p>This link will expire in 1 hour.</p>
+      <a href="${resetLink}">Reset Password</a>
+      <p>If you didn’t request this, you can ignore this email.</p>
+    `,
+  });
+};
