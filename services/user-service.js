@@ -22,6 +22,10 @@ let userSchema = new Schema(
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
 
+    // bookshelfs: [
+    //   { name: "favorites", books: [] },
+    //   { name: "wishlist", books: [] },
+    // ],
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
     goals: { type: [Object], default: [] },
@@ -63,6 +67,7 @@ module.exports.registerUser = function (userData) {
         .hash(userData.password, 10)
         .then((hash) => {
           userData.password = hash;
+          userData.email = userData.email.trim();
           userName = userData.email.split("@")[0];
           if (userName.includes("+")) {
             userName = userName.split("+")[0];
