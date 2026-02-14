@@ -1,6 +1,7 @@
-// models/user.js
+// models/User.js
 
 const mongoose = require("mongoose");
+require("./Bookshelf");
 
 const userSchema = new mongoose.Schema(
   {
@@ -14,6 +15,13 @@ const userSchema = new mongoose.Schema(
 
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+
+    bookshelves: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Bookshelf",
+      },
+    ],
 
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
