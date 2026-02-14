@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const Book = require("../models/Book");
+const Book = require("../models/Book.js");
 
 // ================= Search Google Books (single string) =================
 router.get("/search", async (req, res) => {

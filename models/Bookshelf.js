@@ -1,7 +1,7 @@
 // models/Bookshelf.js
 
 const mongoose = require("mongoose");
-require("./Book");
+require("./Book.js");
 
 const bookshelfSchema = new mongoose.Schema({
   name: {
