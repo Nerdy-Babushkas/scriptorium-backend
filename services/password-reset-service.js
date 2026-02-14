@@ -1,11 +1,10 @@
 const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 
-const { getUserModel } = require("./user-service");
+const User = require("../models/User");
 const { sendPasswordResetEmail } = require("./email-service");
 
 module.exports.requestPasswordReset = async function (email) {
-  const User = getUserModel();
   const user = await User.findOne({ email });
 
   // Prevent email enumeration
@@ -41,7 +40,7 @@ module.exports.resetPassword = async function (
   newPassword,
   confirmPassword,
 ) {
-  const User = getUserModel();
+  W;
 
   if (!newPassword || !confirmPassword) {
     throw new Error("Please fill both password fields");
