@@ -1,7 +1,7 @@
 // models/User.js
 
 const mongoose = require("mongoose");
-require("./Bookshelf");
+const bookshelfSchema = require("./Bookshelf");
 
 const userSchema = new mongoose.Schema(
   {
@@ -16,12 +16,13 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
-    bookshelves: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Bookshelf",
-      },
-    ],
+    bookshelves: {
+      type: [bookshelfSchema],
+      default: [
+        { name: "favorites", books: [] },
+        { name: "wishlist", books: [] },
+      ],
+    },
 
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },

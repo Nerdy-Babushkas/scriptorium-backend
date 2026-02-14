@@ -1,10 +1,12 @@
-// routes/books.js
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const Book = require("../models/Book.js");
+const jwt = require("jsonwebtoken");
+const { getUserFromToken } = require("../services/user-service");
 
-// ================= Search Google Books (single string) =================
+const booksService = require("../services/book-service");
+
+// ================= Search Google Books (UNCHANGED) =================
 router.get("/search", async (req, res) => {
   const query = req.query.q;
 
@@ -16,13 +18,10 @@ router.get("/search", async (req, res) => {
 
   try {
     const apiKey = process.env.BOOKS_API;
-    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-      query,
-    )}&maxResults=20&key=${apiKey}`;
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&key=${apiKey}`;
 
     const response = await axios.get(url);
 
-    // Map results to only the fields we care about
     const books =
       response.data.items?.map((item) => {
         const info = item.volumeInfo;
@@ -48,6 +47,109 @@ router.get("/search", async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching books from Google Books API" });
+  }
+});
+
+// =====================================================
+// ================= SAVE BOOK =================
+// =====================================================
+router.post("/", async (req, res) => {
+  try {
+    const book = await booksService.saveBook(req.body);
+    res.json(book);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= GET BOOK =================
+router.get("/:id", async (req, res) => {
+  try {
+    const book = await booksService.getBookById(req.params.id);
+    res.json(book);
+  } catch (err) {
+    res.status(404).json({ message: err.message });
+  }
+});
+
+// ================= ADD BOOK TO USER SHELF =================
+router.post("/shelf/add", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+    const { bookId, shelf } = req.body;
+
+    const result = await booksService.addBookToShelf(user._id, bookId, shelf);
+    res.json(result);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= REMOVE BOOK FROM USER SHELF =================
+router.post("/shelf/remove", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+    const { bookId, shelf } = req.body;
+
+    const result = await booksService.removeBookFromShelf(
+      user._id,
+      bookId,
+      shelf,
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= GET SPECIFIC USER SHELF =================
+router.get("/shelf/:shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+    const shelf = req.params.shelf;
+
+    const books = await booksService.getUserShelf(user._id, shelf);
+    res.json(books);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= GET ALL USER SHELVES =================
+router.get("/shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+
+    const shelves = await booksService.getAllUserShelves(user._id);
+    res.json(shelves);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= REMOVE BOOK FROM USER SHELF =================
+router.post("/shelf/remove", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+
+    const { bookId, shelf } = req.body;
+
+    if (!bookId || !shelf) {
+      return res.status(400).json({
+        message: "bookId and shelf are required",
+      });
+    }
+
+    const result = await booksService.removeBookFromShelf(
+      user._id,
+      bookId,
+      shelf,
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error("Remove shelf error:", err.message);
+    res.status(401).json({ message: err.message });
   }
 });
 

@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+require("../models/Bookshelf");
 
 //
 // REGISTER
@@ -78,4 +80,21 @@ module.exports.checkUser = async function (userData) {
   await user.save();
 
   return user;
+};
+
+//
+// DECODE USER FROM TOKEN
+//
+module.exports.getUserFromToken = function (req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) throw new Error("Missing Authorization header");
+
+  const token = authHeader.startsWith("jwt ")
+    ? authHeader.slice(4)
+    : authHeader;
+
+  const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+
+  // decodedUser contains { _id, userName, email }
+  return decodedUser;
 };
