@@ -40,14 +40,16 @@ module.exports.resetPassword = async function (
   newPassword,
   confirmPassword,
 ) {
-  W;
-
   if (!newPassword || !confirmPassword) {
     throw new Error("Please fill both password fields");
   }
 
   if (newPassword !== confirmPassword) {
     throw new Error("Passwords do not match");
+  }
+
+  if (!token) {
+    throw new Error("Invalid or expired reset token");
   }
 
   // Hash the incoming token to match the stored hash
