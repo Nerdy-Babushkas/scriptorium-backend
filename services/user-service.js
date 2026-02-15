@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 require("../models/Bookshelf");
+require("../models/MusicShelf");
 
 //
 // REGISTER
