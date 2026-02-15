@@ -94,16 +94,45 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ================= ADD TRACK TO SHELF =================
+// ================= ADD TRACK TO USER SHELF =================
 router.post("/shelf/add", async (req, res) => {
   try {
     const user = getUserFromToken(req);
+    const { shelf, ...trackData } = req.body;
 
-    const { trackId, shelf } = req.body;
+    // Validate shelf
+    if (!shelf) {
+      return res.status(400).json({ message: "Shelf is required" });
+    }
 
-    const result = await musicService.addTrackToShelf(user._id, trackId, shelf);
+    // Validate minimum required track data
+    if (!trackData._id || !trackData.title) {
+      return res.status(400).json({
+        message: "Track must include at least _id (Spotify ID) and title",
+      });
+    }
 
-    res.json(result);
+    // CHECK IF TRACK ALREADY EXISTS (avoid duplicates)
+    let track = await musicService
+      .getTrackById(trackData._id)
+      .catch(() => null);
+
+    if (!track) {
+      track = await musicService.saveTrack(trackData);
+    }
+
+    // ADD TRACK TO USER SHELF
+    const result = await musicService.addTrackToShelf(
+      user._id,
+      track._id,
+      shelf,
+    );
+
+    res.json({
+      message: result.message,
+      shelf,
+      track,
+    });
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
