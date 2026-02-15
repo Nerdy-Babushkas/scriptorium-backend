@@ -88,7 +88,24 @@ Returns the health status of the API: { "status": "UsersAPI OK" }
 
 ### Save a Book `POST /api/books`
 
-**Request Body Example:** { "\_id": "bookId", "title": "Book Title", "authors": ["Author1", "Author2"] }
+**Request Body Example:**
+{
+"\_id": "bookId",
+"title": "Book Title",
+"subtitle": "Optional subtitle",
+"authors": ["Author1", "Author2"],
+"publisher": "Publisher Name",
+"publishedDate": "2020-01-01",
+"description": "Book description",
+"pageCount": 320,
+"averageRating": 4.5,
+"ratingsCount": 50,
+"categories": ["Category1"],
+"imageLinks": {
+"thumbnail": "url",
+"smallThumbnail": "url"
+}
+}
 **Response:** { "message": "Book saved successfully", "book": { ... } }
 
 ---
@@ -101,8 +118,29 @@ Returns the health status of the API: { "status": "UsersAPI OK" }
 
 ### Add Book to User Shelf `POST /api/books/shelf/add`
 
-**Request Body:** { "bookId": "bookId", "shelf": "favorites" // or "wishlist" }
+**Request Body (all fields come from Google API):**  
+{
+"shelf": "favorites", // or "wishlist"
+
+"\_id": "bookId",
+"title": "Book Title",
+"subtitle": "Optional subtitle",
+"authors": ["Author1", "Author2"],
+"publisher": "Publisher Name",
+"publishedDate": "2020-01-01",
+"description": "Book description",
+"pageCount": 320,
+"averageRating": 4.5,
+"ratingsCount": 50,
+"categories": ["Category1"],
+"imageLinks": {
+"thumbnail": "url",
+"smallThumbnail": "url"
+}
+}
+
 **Response:** { "message": "Book added to shelf successfully", "shelf": "favorites", "bookId": "bookId" }
+**note** when a user add a book to its shelf, we check if its already in our database and also save to our Books document if not
 
 ---
 
