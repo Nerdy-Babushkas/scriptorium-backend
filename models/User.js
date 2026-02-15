@@ -2,6 +2,7 @@
 
 const mongoose = require("mongoose");
 const bookshelfSchema = require("./Bookshelf");
+const musicShelfSchema = require("./MusicShelf");
 
 const userSchema = new mongoose.Schema(
   {
@@ -21,6 +22,14 @@ const userSchema = new mongoose.Schema(
       default: [
         { name: "favorites", books: [] },
         { name: "wishlist", books: [] },
+      ],
+    },
+
+    musicShelves: {
+      type: [musicShelfSchema],
+      default: [
+        { name: "favorites", tracks: [] },
+        { name: "wishlist", tracks: [] },
       ],
     },
 
