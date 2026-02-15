@@ -10,8 +10,7 @@ const bookshelfSchema = new mongoose.Schema({
   },
   books: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Book",
+      type: String,
     },
   ],
 });

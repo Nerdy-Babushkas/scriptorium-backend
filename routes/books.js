@@ -76,10 +76,33 @@ router.get("/:id", async (req, res) => {
 router.post("/shelf/add", async (req, res) => {
   try {
     const user = getUserFromToken(req);
-    const { bookId, shelf } = req.body;
+    const { shelf, ...bookData } = req.body;
 
-    const result = await booksService.addBookToShelf(user._id, bookId, shelf);
-    res.json(result);
+    if (!shelf) {
+      return res.status(400).json({ message: "Shelf is required" });
+    }
+
+    if (!bookData._id || !bookData.title) {
+      return res.status(400).json({
+        message: "Book must include at least _id (Google ID) and title",
+      });
+    }
+
+    // 1. CHECK IF BOOK ALREADY EXISTS (avoid duplicates)
+    let book = await booksService.getBookById(bookData._id).catch(() => null);
+
+    if (!book) {
+      book = await booksService.saveBook(bookData);
+    }
+
+    // 2. ADD BOOK TO USER SHELF (using book._id string)
+    const result = await booksService.addBookToShelf(user._id, book._id, shelf);
+
+    res.json({
+      message: result.message,
+      shelf,
+      book,
+    });
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
@@ -102,6 +125,18 @@ router.post("/shelf/remove", async (req, res) => {
   }
 });
 
+// ================= GET ALL USER SHELVES =================
+router.get("/shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+
+    const shelves = await booksService.getAllUserShelves(user._id);
+    res.json(shelves);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
 // ================= GET SPECIFIC USER SHELF =================
 router.get("/shelf/:shelf", async (req, res) => {
   try {
@@ -110,18 +145,6 @@ router.get("/shelf/:shelf", async (req, res) => {
 
     const books = await booksService.getUserShelf(user._id, shelf);
     res.json(books);
-  } catch (err) {
-    res.status(401).json({ message: err.message });
-  }
-});
-
-// ================= GET ALL USER SHELVES =================
-router.get("/shelf", async (req, res) => {
-  try {
-    const user = getUserFromToken(req);
-
-    const shelves = await booksService.getAllUserShelves(user._id);
-    res.json(shelves);
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
