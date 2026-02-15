@@ -61,6 +61,29 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.get("/shelf/:shelfName", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+    const shelfName = req.params.shelfName;
+
+    const tracks = await musicService.getUserShelf(user._id, shelfName);
+    res.json(tracks);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+router.get("/shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+
+    const shelves = await musicService.getAllUserShelves(user._id);
+    res.json(shelves);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
 // ================= GET TRACK =================
 router.get("/:id", async (req, res) => {
   try {
@@ -101,25 +124,6 @@ router.post("/shelf/remove", async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(401).json({ message: err.message });
-  }
-});
-
-// ================= GET USER SHELVES =================
-router.get("/shelf/:shelfName?", async (req, res) => {
-  try {
-    const user = getUserFromToken(req);
-
-    const { shelfName } = req.params;
-
-    if (shelfName) {
-      const tracks = await musicService.getUserShelf(user._id, shelfName);
-      return res.json({ [shelfName]: tracks });
-    } else {
-      const shelves = await musicService.getAllUserShelves(user._id);
-      return res.json(shelves);
-    }
-  } catch (err) {
-    return res.status(401).json({ message: err.message });
   }
 });
 
