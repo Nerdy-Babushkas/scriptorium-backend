@@ -62,6 +62,31 @@ router.post("/", async (req, res) => {
   }
 });
 
+// ================= GET ALL USER SHELVES =================
+router.get("/shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+
+    const shelves = await booksService.getAllUserShelves(user._id);
+    res.json(shelves);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// ================= GET SPECIFIC USER SHELF =================
+router.get("/shelf/:shelf", async (req, res) => {
+  try {
+    const user = getUserFromToken(req);
+    const shelf = req.params.shelf;
+
+    const books = await booksService.getUserShelf(user._id, shelf);
+    res.json(books);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
 // ================= GET BOOK =================
 router.get("/:id", async (req, res) => {
   try {
@@ -120,31 +145,6 @@ router.post("/shelf/remove", async (req, res) => {
       shelf,
     );
     res.json(result);
-  } catch (err) {
-    res.status(401).json({ message: err.message });
-  }
-});
-
-// ================= GET ALL USER SHELVES =================
-router.get("/shelf", async (req, res) => {
-  try {
-    const user = getUserFromToken(req);
-
-    const shelves = await booksService.getAllUserShelves(user._id);
-    res.json(shelves);
-  } catch (err) {
-    res.status(401).json({ message: err.message });
-  }
-});
-
-// ================= GET SPECIFIC USER SHELF =================
-router.get("/shelf/:shelf", async (req, res) => {
-  try {
-    const user = getUserFromToken(req);
-    const shelf = req.params.shelf;
-
-    const books = await booksService.getUserShelf(user._id, shelf);
-    res.json(books);
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
