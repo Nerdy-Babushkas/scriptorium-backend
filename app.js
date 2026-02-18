@@ -43,39 +43,36 @@ passport.use(
 //
 app.use(express.json());
 
-const allowedOrigins = [
-  "https://scriptorium-frontend.vercel.app",
-];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow non-browser tools (Postman) / server-to-server / same-origin
-      if (!origin) return callback(null, true);
+    // production frontend
+    if (origin === "https://scriptorium-frontend.vercel.app") {
+      return callback(null, true);
+    }
 
-      // allow production frontend
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+    // allow ALL Vercel previews for frontend
+    if (
+      origin.startsWith("https://scriptorium-frontend-") &&
+      origin.endsWith(".vercel.app")
+    ) {
+      return callback(null, true);
+    }
 
-      // allow ALL Vercel previews for your frontend project
-      if (
-        origin.startsWith("https://scriptorium-frontend-git-") &&
-        origin.endsWith(".vercel.app")
-      ) {
-        return callback(null, true);
-      }
+    // localhost dev (optional)
+    if (origin.startsWith("http://localhost:")) {
+      return callback(null, true);
+    }
 
-      // allow localhost (optional)
-      if (origin.startsWith("http://localhost:")) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-      return callback(new Error("Not allowed by CORS"));
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
-
-// handle preflight for all routes
-app.options("*", cors());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(passport.initialize());
 
