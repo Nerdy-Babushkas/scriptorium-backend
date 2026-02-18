@@ -6,6 +6,7 @@ const { getUserFromToken } = require("../services/user-service");
 const goalService = require("../services/goal-service");
 
 
+
 router.get("/user", async (req, res) => {
   try {
     const user = getUserFromToken(req);
