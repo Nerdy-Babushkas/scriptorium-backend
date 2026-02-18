@@ -1,3 +1,4 @@
+//router/goals.js
 const express = require("express");
 const router = express.Router();
 
@@ -20,39 +21,45 @@ router.post("/add", async (req, res) => {
   try {
     const user = getUserFromToken(req);
 
-    const { title, description, targetDate, progress = 0 } = req.body;
+    const { title, type, current = 0, total } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ message: "Title is required" });
+    if (!title || !type || !total) {
+      return res.status(400).json({ message: "title, type and total are required" });
     }
 
-    const goal = await goalService.createGoal({
-      user: user._id,
-      title,
-      description,
-      targetDate,
-      progress,
-    });
+    const goal = await goalService.createGoal(
+      user._id,
+      { title, type, current, total }
+    );
 
     res.json({
       message: "Goal created successfully",
       goal,
     });
+
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
 });
 
 
+
 router.put("/update/:id", async (req, res) => {
   try {
-    const updates = req.body;
-    const goal = await goalService.updateGoal(req.params.id, updates);
+    const user = getUserFromToken(req);
+    const { current } = req.body;
+
+    const goal = await goalService.updateGoalProgress(
+      user._id,
+      req.params.id,
+      current
+    );
 
     res.json({
       message: "Goal updated successfully",
       goal,
     });
+
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
