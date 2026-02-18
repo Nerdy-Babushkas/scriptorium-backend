@@ -10,14 +10,8 @@ const routes = require("./routes");
 
 const app = express();
 
-//
-// ===== CONNECT DB ON APP LOAD =====
-//
 connectDB();
 
-//
-// ===== JWT / Passport Setup =====
-//
 const ExtractJwt = passportJWT.ExtractJwt;
 const JwtStrategy = passportJWT.Strategy;
 
@@ -38,29 +32,21 @@ passport.use(
   }),
 );
 
-//
-// ===== Middleware =====
-//
 app.use(express.json());
 
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
-    // production frontend
     if (origin === "https://scriptorium-frontend.vercel.app") {
       return callback(null, true);
     }
 
-    // allow ALL Vercel previews for frontend
-    if (
-      origin.startsWith("https://scriptorium-frontend-") &&
-      origin.endsWith(".vercel.app")
-    ) {
+    // allow any scriptorium-frontend vercel preview URL
+    if (origin.includes("scriptorium-frontend") && origin.endsWith(".vercel.app")) {
       return callback(null, true);
     }
 
-    // localhost dev (optional)
     if (origin.startsWith("http://localhost:")) {
       return callback(null, true);
     }
@@ -74,18 +60,18 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
+// hard-stop OPTIONS so it never hits auth/routes
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 app.use(passport.initialize());
 
-//
-// ===== Health Check =====
-//
 app.get("/", (req, res) => {
   res.status(200).json({ status: "UsersAPI OK" });
 });
 
-//
-// ===== Routes =====
-//
 app.use("/api", routes);
 
 module.exports = app;
