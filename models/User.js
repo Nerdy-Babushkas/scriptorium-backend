@@ -1,8 +1,7 @@
-// models/User.js
-
 const mongoose = require("mongoose");
 const bookshelfSchema = require("./Bookshelf");
 const musicShelfSchema = require("./MusicShelf");
+const movieshelfSchema = require("./Movieshelf");
 
 const userSchema = new mongoose.Schema(
   {
@@ -17,6 +16,7 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
+    // ================= BOOK SHELVES =================
     bookshelves: {
       type: [bookshelfSchema],
       default: [
@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
       ],
     },
 
+    // ================= MUSIC SHELVES =================
     musicShelves: {
       type: [musicShelfSchema],
       default: [
@@ -33,6 +34,16 @@ const userSchema = new mongoose.Schema(
       ],
     },
 
+    // ================= MOVIE SHELVES =================
+    movieshelves: {
+      type: [movieshelfSchema],
+      default: [
+        { name: "favorites", movies: [] },
+        { name: "watchlist", movies: [] },
+      ],
+    },
+
+    // ================= GAMIFICATION =================
     points_balance: { type: Number, default: 0 },
     reflections: { type: [Object], default: [] },
     goals: { type: [Object], default: [] },
@@ -40,6 +51,7 @@ const userSchema = new mongoose.Schema(
     owned_rewards: { type: [Object], default: [] },
     rooms: { type: [Object], default: [] },
     media_placements: { type: [Object], default: [] },
+
     last_login: Date,
   },
   { timestamps: true },
