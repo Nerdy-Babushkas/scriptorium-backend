@@ -1,3 +1,5 @@
+//scriptorium-backend/models/Book.js
+
 const mongoose = require("mongoose");
 
 const bookSchema = new mongoose.Schema(

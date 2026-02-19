@@ -26,16 +26,26 @@ async function getBooksByIds(bookIds) {
 
 // ================= ADD BOOK TO USER SHELF =================
 async function addBookToShelf(userId, bookId, shelfName) {
-  if (!["favorites", "wishlist"].includes(shelfName)) {
-    throw new Error("Invalid shelf name");
+  // 1. Allow all 4 shelf types
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "reading", "finished"];
+  
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
+    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
   }
 
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  const shelf = user.bookshelves.find((s) => s.name === shelfName);
-  if (!shelf) throw new Error("Shelf not found");
+  // 2. Find shelf OR create it if it doesn't exist
+  let shelf = user.bookshelves.find((s) => s.name === shelfName);
+  
+  if (!shelf) {
+      // Create the missing shelf dynamically
+      shelf = { name: shelfName, books: [] };
+      user.bookshelves.push(shelf);
+  }
 
+  // 3. Add book if not present
   if (!shelf.books.includes(bookId)) {
     shelf.books.push(bookId);
     await user.save();
@@ -46,7 +56,9 @@ async function addBookToShelf(userId, bookId, shelfName) {
 
 // ================= GET SPECIFIC USER SHELF =================
 async function getUserShelf(userId, shelfName) {
-  if (!["favorites", "wishlist"].includes(shelfName)) {
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "reading", "finished"];
+
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
     throw new Error("Invalid shelf name");
   }
 
@@ -54,7 +66,9 @@ async function getUserShelf(userId, shelfName) {
   if (!user) throw new Error("User not found");
 
   const shelf = user.bookshelves.find((s) => s.name === shelfName);
-  if (!shelf) throw new Error("Shelf not found");
+  
+  // Return empty list if shelf doesn't exist yet (instead of crashing)
+  if (!shelf) return []; 
 
   return await getBooksByIds(shelf.books);
 }
@@ -64,19 +78,27 @@ async function getAllUserShelves(userId) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  const favoritesShelf = user.bookshelves.find((s) => s.name === "favorites");
-  const wishlistShelf = user.bookshelves.find((s) => s.name === "wishlist");
+  // Helper to fetch books for a shelf, returns empty array if shelf doesn't exist
+  const getShelfBooks = async (shelfName) => {
+    const shelf = user.bookshelves.find((s) => s.name === shelfName);
+    return await getBooksByIds(shelf?.books || []);
+  };
 
-  const favorites = await getBooksByIds(favoritesShelf?.books || []);
-  const wishlist = await getBooksByIds(wishlistShelf?.books || []);
-
-  return { favorites, wishlist };
+  return {
+    favorites: await getShelfBooks("favorites"),
+    wishlist: await getShelfBooks("wishlist"),
+    reading: await getShelfBooks("reading"),
+    finished: await getShelfBooks("finished"),
+  };
 }
 
 // ================= REMOVE BOOK FROM USER SHELF =================
 async function removeBookFromShelf(userId, bookId, shelfName) {
-  if (!["favorites", "wishlist"].includes(shelfName)) {
-    throw new Error("Invalid shelf name");
+  // FIX: Updated list to include 'reading' and 'finished'
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "reading", "finished"];
+
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
+    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
   }
 
   const user = await User.findById(userId);

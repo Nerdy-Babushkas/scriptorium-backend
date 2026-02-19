@@ -37,7 +37,7 @@ const reflectionSchema = new mongoose.Schema(
 
     itemType: {
       type: String,
-      enum: ["book", "track"],
+      enum: ["book", "track", "movie"],
       required: true,
       index: true,
     },

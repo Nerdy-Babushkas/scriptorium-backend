@@ -5,6 +5,7 @@ const User = require("../models/User");
 // ================= SAVE TRACK =================
 async function saveTrack(trackData) {
   const existing = await Music.findById(trackData._id);
+
   if (existing) return existing; // avoid duplicates
 
   const track = new Music(trackData);
@@ -25,22 +26,30 @@ async function getTracksByIds(trackIds) {
 
 // ================= ADD TRACK TO USER SHELF =================
 async function addTrackToShelf(userId, trackId, shelfName) {
-  if (!["favorites", "wishlist"].includes(shelfName)) {
-    throw new Error("Invalid shelf name");
+  // 1. Allow all 4 shelf types (using 'listening' instead of 'reading')
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "listening", "finished"];
+  
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
+    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
   }
 
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  const shelf = user.musicShelves.find((s) => s.name === shelfName);
-  if (!shelf) throw new Error(`Shelf "${shelfName}" not found`);
+  // 2. Find shelf OR create it if it doesn't exist
+  // Note: accessing musicShelves instead of bookshelves
+  let shelf = user.musicShelves.find((s) => s.name === shelfName);
+  
+  if (!shelf) {
+      // Create the missing shelf dynamically
+      shelf = { name: shelfName, tracks: [] };
+      user.musicShelves.push(shelf);
+  }
 
-  // Add track if not already in shelf
+  // 3. Add track if not present
   if (!shelf.tracks.includes(trackId)) {
-    shelf.tracks.push(trackId); // tracks are strings (UUIDs)
+    shelf.tracks.push(trackId);
     await user.save();
-  } else {
-    throw new Error("Track already in shelf");
   }
 
   return { message: `Track added to ${shelfName}` };
@@ -48,7 +57,9 @@ async function addTrackToShelf(userId, trackId, shelfName) {
 
 // ================= GET SPECIFIC USER SHELF =================
 async function getUserShelf(userId, shelfName) {
-  if (!["favorites", "wishlist"].includes(shelfName)) {
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "listening", "finished"];
+
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
     throw new Error("Invalid shelf name");
   }
 
@@ -56,7 +67,9 @@ async function getUserShelf(userId, shelfName) {
   if (!user) throw new Error("User not found");
 
   const shelf = user.musicShelves.find((s) => s.name === shelfName);
-  if (!shelf) throw new Error(`Shelf "${shelfName}" not found`);
+  
+  // Return empty list if shelf doesn't exist yet (instead of crashing)
+  if (!shelf) return []; 
 
   return await getTracksByIds(shelf.tracks);
 }
@@ -66,43 +79,47 @@ async function getAllUserShelves(userId) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  const favoritesShelf = user.musicShelves.find((s) => s.name === "favorites");
-  const wishlistShelf = user.musicShelves.find((s) => s.name === "wishlist");
+  // Helper to fetch tracks for a shelf, returns empty array if shelf doesn't exist
+  const getShelfTracks = async (shelfName) => {
+    const shelf = user.musicShelves.find((s) => s.name === shelfName);
+    return await getTracksByIds(shelf?.tracks || []);
+  };
 
-  const favorites = await getTracksByIds(favoritesShelf?.tracks || []);
-  const wishlist = await getTracksByIds(wishlistShelf?.tracks || []);
-
-  return { favorites, wishlist };
+  return {
+    favorites: await getShelfTracks("favorites"),
+    wishlist: await getShelfTracks("wishlist"),
+    listening: await getShelfTracks("listening"),
+    finished: await getShelfTracks("finished"),
+  };
 }
 
 // ================= REMOVE TRACK FROM USER SHELF =================
 async function removeTrackFromShelf(userId, trackId, shelfName) {
-  console.log("🔹 removeTrackFromShelf called:", {
-    userId,
-    trackId,
-    shelfName,
-  });
+  // FIX: Updated list to include 'listening' and 'finished'
+  const ALLOWED_SHELVES = ["favorites", "wishlist", "listening", "finished"];
 
-  if (!["favorites", "wishlist"].includes(shelfName)) {
-    throw new Error("Invalid shelf name");
+  if (!ALLOWED_SHELVES.includes(shelfName)) {
+    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
   }
 
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
   const shelf = user.musicShelves.find((s) => s.name === shelfName);
-  if (!shelf) throw new Error(`Shelf "${shelfName}" not found`);
+  if (!shelf) throw new Error("Shelf not found");
 
   const originalLength = shelf.tracks.length;
-  shelf.tracks = shelf.tracks.filter((id) => id !== trackId);
+
+  // Remove track
+  shelf.tracks = shelf.tracks.filter((id) => id.toString() !== trackId.toString());
 
   if (shelf.tracks.length === originalLength) {
     return { message: "Track was not in shelf" };
   }
 
   await user.save();
-
-  return { message: `Track removed from ${shelfName}` };
+  return { message: `Track
+     removed from ${shelfName}` };
 }
 
 module.exports = {
