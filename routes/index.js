@@ -11,7 +11,7 @@ const movieRoutes = require("./movies");
 router.use("/user", userRoutes);
 router.use("/books", bookRoutes);
 router.use("/music", musicRoutes);
-router.use("/reflections", reflectionRoutes);
+router.use("/reflection", reflectionRoutes);
 router.use("/movies", movieRoutes);
 
 module.exports = router;
