@@ -117,13 +117,16 @@ router.put("/update/:id/:userId", async (req, res) => {
 // DELETE goal for a userId
 router.delete("/delete/:id/:userId", async (req, res) => {
   try {
-    const result = await goalService.deleteGoal(req.params.userId, req.params.id);
-    if (!result) return res.status(404).json({ message: "Goal not found" });
+    const deleted = await goalService.deleteGoal(req.params.userId, req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Goal not found" });
+
     res.json({ message: "Goal deleted successfully" });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
+
+
 
 
 module.exports = router;
