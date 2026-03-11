@@ -68,18 +68,20 @@ router.get("/user", async (req, res) => {
 // ================= GET REFLECTIONS FOR ITEM =================
 router.get("/item/:itemId", async (req, res) => {
   try {
+    const user = getUserFromToken(req);
     const { itemId } = req.params;
     const { itemType } = req.query;
-
-    if (!itemType) {
-      return res.status(400).json({ message: "itemType is required" });
-    }
 
     const reflections = await reflectionService.getReflectionsByItem(
       itemId,
       itemType,
     );
-    res.json(reflections);
+
+    const filtered = reflections.filter(
+      (r) => r.user.toString() === user._id.toString(),
+    );
+
+    res.json(filtered);
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
@@ -104,14 +106,21 @@ router.get("/:id", async (req, res) => {
 // ================= UPDATE REFLECTION =================
 router.put("/update/:id", async (req, res) => {
   try {
-    const updates = req.body;
-    const reflection = await reflectionService.updateReflection(
+    const user = getUserFromToken(req);
+    const reflection = await reflectionService.getReflectionById(req.params.id);
+
+    if (reflection.user.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const updated = await reflectionService.updateReflection(
       req.params.id,
-      updates,
+      req.body,
     );
+
     res.json({
       message: "Reflection updated successfully",
-      reflection,
+      reflection: updated,
     });
   } catch (err) {
     res.status(401).json({ message: err.message });
@@ -121,11 +130,17 @@ router.put("/update/:id", async (req, res) => {
 // ================= REMOVE REFLECTION =================
 router.delete("/remove/:id", async (req, res) => {
   try {
+    const user = getUserFromToken(req);
+    const reflection = await reflectionService.getReflectionById(req.params.id);
+
+    if (reflection.user.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     const result = await reflectionService.removeReflection(req.params.id);
     res.json(result);
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
 });
-
 module.exports = router;
