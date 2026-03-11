@@ -88,7 +88,13 @@ router.get("/item/:itemId", async (req, res) => {
 // ================= GET SPECIFIC REFLECTION =================
 router.get("/:id", async (req, res) => {
   try {
+    const user = getUserFromToken(req);
     const reflection = await reflectionService.getReflectionById(req.params.id);
+
+    if (reflection.user.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     res.json(reflection);
   } catch (err) {
     res.status(404).json({ message: err.message });
