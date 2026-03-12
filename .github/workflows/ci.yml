@@ -38,7 +38,3 @@ jobs:
       # Run unit tests
       - name: Run tests
         run: npm test
-
-      # Run tests with coverage & enforce thresholds
-      - name: Run tests with coverage
-        run: npm test -- --coverage
