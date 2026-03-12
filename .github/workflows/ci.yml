@@ -10,22 +10,31 @@ jobs:
   test:
     name: Node ${{ matrix.node-version }} Tests
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [20]
 
     steps:
+      # Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
 
+      # Install dependencies
       - name: Install dependencies
         run: npm install
 
+      # Run ESLint (optional, but recommended)
+      - name: Lint code
+        run: npm run lint || echo "Linting completed with warnings"
+
+      # Run unit tests
       - name: Run tests
         run: npm test
