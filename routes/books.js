@@ -139,23 +139,6 @@ router.post("/shelf/add", async (req, res) => {
 router.post("/shelf/remove", async (req, res) => {
   try {
     const user = getUserFromToken(req);
-    const { bookId, shelf } = req.body;
-
-    const result = await booksService.removeBookFromShelf(
-      user._id,
-      bookId,
-      shelf,
-    );
-    res.json(result);
-  } catch (err) {
-    res.status(401).json({ message: err.message });
-  }
-});
-
-// ================= REMOVE BOOK FROM USER SHELF =================
-router.post("/shelf/remove", async (req, res) => {
-  try {
-    const user = getUserFromToken(req);
 
     const { bookId, shelf } = req.body;
 
