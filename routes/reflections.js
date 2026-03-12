@@ -32,7 +32,6 @@ router.post("/add", async (req, res) => {
       });
     }
 
-    console.log("Creating reflection...");
     const reflection = await reflectionService.createReflection({
       user: user._id,
       item: itemId,
