@@ -161,4 +161,76 @@ router.post("/shelf/remove", async (req, res) => {
   }
 });
 
+// ================= ADVANCED SEARCH =================
+router.get("/advanced/search", async (req, res) => {
+  try {
+    const {
+      q,
+      title,
+      author,
+      category,
+      publisher,
+      page = 1,
+      limit = 20,
+      orderBy = "relevance",
+    } = req.query;
+
+    const apiKey = process.env.BOOKS_API;
+
+    const queryParts = [];
+
+    if (q) queryParts.push(q);
+    if (title) queryParts.push(`intitle:${title}`);
+    if (author) queryParts.push(`inauthor:${author}`);
+    if (category) queryParts.push(`subject:${category}`);
+    if (publisher) queryParts.push(`inpublisher:${publisher}`);
+
+    if (queryParts.length === 0) {
+      return res.status(400).json({
+        message: "Provide at least one search parameter",
+      });
+    }
+
+    const startIndex = (page - 1) * limit;
+
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      queryParts.join(" "),
+    )}&maxResults=${limit}&startIndex=${startIndex}&orderBy=${orderBy}&key=${apiKey}`;
+
+    const response = await axios.get(url);
+
+    const books =
+      response.data.items?.map((item) => {
+        const info = item.volumeInfo;
+
+        return {
+          _id: item.id,
+          title: info.title,
+          subtitle: info.subtitle,
+          authors: info.authors || [],
+          publisher: info.publisher,
+          publishedDate: info.publishedDate,
+          description: info.description,
+          pageCount: info.pageCount,
+          averageRating: info.averageRating,
+          ratingsCount: info.ratingsCount,
+          categories: info.categories || [],
+          imageLinks: info.imageLinks || {},
+        };
+      }) || [];
+
+    res.json({
+      totalResults: response.data.totalItems || 0,
+      page: Number(page),
+      books,
+    });
+  } catch (err) {
+    console.error("Advanced Google Books search error:", err.message);
+
+    res.status(500).json({
+      message: "Error performing advanced Google Books search",
+    });
+  }
+});
+
 module.exports = router;
