@@ -154,3 +154,54 @@ test("POST /api/books/shelf/remove fails if parameters missing", async () => {
 
   expect(response.statusCode).toBe(400);
 });
+
+test("GET /api/books/advanced/search returns books from Google Books", async () => {
+  axios.get.mockResolvedValue({
+    data: {
+      totalItems: 1,
+      items: [
+        {
+          id: "book456",
+          volumeInfo: {
+            title: "Advanced Book",
+            authors: ["Advanced Author"],
+            publisher: "Advanced Publisher",
+          },
+        },
+      ],
+    },
+  });
+
+  const response = await request(app).get(
+    "/api/books/advanced/search?author=Author",
+  );
+
+  expect(response.statusCode).toBe(200);
+  expect(response.body.books.length).toBe(1);
+  expect(response.body.books[0].title).toBe("Advanced Book");
+
+  expect(axios.get).toHaveBeenCalled();
+});
+
+test("GET /api/books/advanced/search fails if no parameters provided", async () => {
+  const response = await request(app).get("/api/books/advanced/search");
+
+  expect(response.statusCode).toBe(400);
+});
+
+test("GET /api/books/advanced/search handles Google API failure", async () => {
+  const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+  axios.get.mockRejectedValue(new Error("Google API failure"));
+
+  const response = await request(app).get(
+    "/api/books/advanced/search?q=history",
+  );
+
+  expect(response.statusCode).toBe(500);
+  expect(response.body.message).toBe(
+    "Error performing advanced Google Books search",
+  );
+
+  consoleSpy.mockRestore();
+});

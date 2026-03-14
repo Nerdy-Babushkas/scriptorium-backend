@@ -324,6 +324,37 @@ All book management routes require a valid JWT token in the `Authorization` head
 }
 ```
 
+## Advanced Search
+
+### Advanced Google Books Search
+
+`GET /api/books/advanced/search`
+
+Performs advanced search using the Google Books API with optional filters.
+
+---
+
+### Query Parameters
+
+| Parameter   | Description                       | Example             |
+| ----------- | --------------------------------- | ------------------- |
+| `q`         | General search query              | `q=philosophy`      |
+| `title`     | Search by book title              | `title=Revolution`  |
+| `author`    | Filter by author                  | `author=Nietzsche`  |
+| `category`  | Filter by category                | `category=History`  |
+| `publisher` | Filter by publisher               | `publisher=Penguin` |
+| `page`      | Pagination page (default: 1)      | `page=2`            |
+| `limit`     | Number of results (default: 20)   | `limit=20`          |
+| `orderBy`   | Sorting (`relevance` or `newest`) | `orderBy=newest`    |
+
+---
+
+### Example Request
+
+```http
+GET /api/books/advanced/search?author=Fanon&category=Politics&page=1
+```
+
 ---
 
 ## Music Management
