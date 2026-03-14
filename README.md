@@ -474,6 +474,22 @@ All music routes require a valid JWT token.
 }
 ```
 
+## Advanced Music Search
+
+### `GET /api/music/advanced/search`
+
+Performs advanced track search using the MusicBrainz API.
+
+| Parameter | Description          | Example                  |
+| --------- | -------------------- | ------------------------ |
+| `q`       | General search query | `q=rock`                 |
+| `title`   | Track title          | `title=Paranoid Android` |
+| `artist`  | Artist name          | `artist=Radiohead`       |
+| `release` | Album title          | `release=OK Computer`    |
+| `year`    | Release year         | `year=1997`              |
+| `page`    | Pagination page      | `page=2`                 |
+| `limit`   | Results per page     | `limit=25`               |
+
 ## Reflections
 
 Reflections are user notes or thoughts about a media item, optionally including progress, mood tags, feelings, and metadata.

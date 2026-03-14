@@ -156,5 +156,66 @@ router.post("/shelf/remove", async (req, res) => {
   }
 });
 
+// ================= ADVANCED MUSIC SEARCH =================
+router.get("/advanced/search", async (req, res) => {
+  try {
+    const { q, title, artist, release, year, page = 1, limit = 25 } = req.query;
+
+    const queryParts = [];
+
+    if (q) queryParts.push(q);
+    if (title) queryParts.push(`recording:${title}`);
+    if (artist) queryParts.push(`artist:${artist}`);
+    if (release) queryParts.push(`release:${release}`);
+    if (year) queryParts.push(`date:${year}`);
+
+    if (queryParts.length === 0) {
+      return res.status(400).json({
+        message: "Provide at least one search parameter",
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(
+      queryParts.join(" "),
+    )}&fmt=json&limit=${limit}&offset=${offset}`;
+
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "ScriptoriumApp/1.0 ( babushkas.prj@gmail.com )",
+      },
+    });
+
+    const tracks =
+      response.data.recordings?.map((item) => ({
+        _id: item.id,
+        title: item.title,
+        artist: {
+          name: item["artist-credit"]?.[0]?.name || "Unknown",
+          mbid: item["artist-credit"]?.[0]?.artist?.id,
+        },
+        release: {
+          title: item.releases?.[0]?.title,
+          mbid: item.releases?.[0]?.id,
+          date: item.releases?.[0]?.date,
+        },
+        duration: item.length,
+      })) || [];
+
+    res.json({
+      totalResults: response.data.count || 0,
+      page: Number(page),
+      tracks,
+    });
+  } catch (err) {
+    console.error("Advanced MusicBrainz search error:", err.message);
+
+    res.status(500).json({
+      message: "Error performing advanced MusicBrainz search",
+    });
+  }
+});
+
 // ================= GET ALL USER SHELVES =================
 module.exports = router;
