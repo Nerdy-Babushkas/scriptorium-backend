@@ -23,7 +23,7 @@ router.get("/search", async (req, res) => {
 
     const currentPage = Number(page);
     const pageLimit = Number(limit);
-    const startIndex = (page - 1) * limit;
+    const startIndex = (currentPage - 1) * pageLimit;
 
     const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
       q,
