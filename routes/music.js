@@ -9,18 +9,21 @@ const musicService = require("../services/music-service");
 
 // ================= SEARCH MUSIC =================
 router.get("/search", async (req, res) => {
-  const query = req.query.q;
+  const { q, page = 1, limit = 20 } = req.query;
 
-  if (!query) {
+  if (!q) {
     return res
       .status(400)
       .json({ message: "Missing search query parameter 'q'" });
   }
 
   try {
+    const currentPage = Number(page);
+    const pageLimit = Number(limit);
+    const offset = (currentPage - 1) * pageLimit;
     const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(
-      query,
-    )}&fmt=json`;
+      q,
+    )}&fmt=json&limit=${pageLimit}&offset=${offset}`;
 
     const response = await axios.get(url, {
       headers: {

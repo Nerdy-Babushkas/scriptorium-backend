@@ -10,9 +10,9 @@ const booksService = require("../services/book-service");
 
 // ================= Search Google Books (UNCHANGED) =================
 router.get("/search", async (req, res) => {
-  const query = req.query.q;
+  const { q, page = 1, limit = 20 } = req.query;
 
-  if (!query) {
+  if (!q) {
     return res
       .status(400)
       .json({ message: "Missing search query parameter 'q'" });
@@ -20,7 +20,14 @@ router.get("/search", async (req, res) => {
 
   try {
     const apiKey = process.env.BOOKS_API;
-    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&key=${apiKey}`;
+
+    const currentPage = Number(page);
+    const pageLimit = Number(limit);
+    const startIndex = (currentPage - 1) * pageLimit;
+
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      q,
+    )}&maxResults=${limit}&startIndex=${startIndex}&key=${apiKey}`;
 
     const response = await axios.get(url);
 
