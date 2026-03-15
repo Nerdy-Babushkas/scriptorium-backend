@@ -11,7 +11,7 @@ const musicService = require("../services/music-service");
 router.get("/search", async (req, res) => {
   const { q, page = 1, limit = 20 } = req.query;
 
-  if (!query) {
+  if (!q) {
     return res
       .status(400)
       .json({ message: "Missing search query parameter 'q'" });
