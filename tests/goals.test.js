@@ -1,5 +1,3 @@
-// tests/goals.test.js
-
 const request = require("supertest");
 const express = require("express");
 
@@ -18,15 +16,15 @@ app.use("/api/goals", goalsRouter);
 describe("Goals Routes", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default mock: assume a valid user is logged in for every test
+    getUserFromToken.mockReturnValue({ _id: "user123" });
   });
 
   // ==========================
-  // Existing JWT routes
+  // AUTHENTICATED ROUTES
   // ==========================
 
   test("GET /api/goals/user returns user's goals", async () => {
-    getUserFromToken.mockReturnValue({ _id: "user1" });
-
     goalService.getGoalsByUser.mockResolvedValue([
       { _id: "g1", title: "Goal 1", type: "habit", total: 10, current: 0 },
     ]);
@@ -35,11 +33,10 @@ describe("Goals Routes", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body.length).toBe(1);
+    expect(goalService.getGoalsByUser).toHaveBeenCalledWith("user123");
   });
 
   test("POST /api/goals/add creates a goal", async () => {
-    getUserFromToken.mockReturnValue({ _id: "user1" });
-
     const goalData = { title: "Read books", type: "habit", total: 5 };
 
     goalService.createGoal.mockResolvedValue({
@@ -52,17 +49,16 @@ describe("Goals Routes", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body.message).toBe("Goal created successfully");
-    expect(goalService.createGoal).toHaveBeenCalled();
+    // Verify it called the service with the ID from the TOKEN, not the URL
+    expect(goalService.createGoal).toHaveBeenCalledWith(
+      "user123",
+      expect.any(Object),
+    );
   });
 
   test("PUT /api/goals/update/:id updates goal progress", async () => {
-    getUserFromToken.mockReturnValue({ _id: "user1" });
-
     goalService.updateGoalProgress.mockResolvedValue({
       _id: "g1",
-      title: "Read books",
-      type: "habit",
-      total: 5,
       current: 3,
     });
 
@@ -72,74 +68,45 @@ describe("Goals Routes", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body.message).toBe("Goal updated successfully");
+    expect(goalService.updateGoalProgress).toHaveBeenCalledWith(
+      "user123",
+      "g1",
+      3,
+    );
   });
 
-  // ==========================
-  // New userId-based routes
-  // ==========================
-
-  test("GET /api/goals/user/:userId returns goals", async () => {
-    goalService.getGoalsByUser.mockResolvedValue([
-      { _id: "g1", title: "Goal A" },
-    ]);
-
-    const response = await request(app).get("/api/goals/user/user123");
-
-    expect(response.statusCode).toBe(200);
-    expect(response.body.length).toBe(1);
-  });
-
-  test("POST /api/goals/add/:userId creates a goal for userId", async () => {
-    const goalData = { title: "Exercise", type: "habit", total: 10 };
-
-    goalService.createGoal.mockResolvedValue({
-      _id: "g2",
-      ...goalData,
-      current: 0,
-    });
-
-    const response = await request(app)
-      .post("/api/goals/add/user123")
-      .send(goalData);
-
-    expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe("Goal created successfully");
-  });
-
-  test("PUT /api/goals/update/:id/:userId updates goal progress for userId", async () => {
-    goalService.updateGoalProgress.mockResolvedValue({
-      _id: "g2",
-      title: "Exercise",
-      type: "habit",
-      total: 10,
-      current: 7,
-    });
-
-    const response = await request(app)
-      .put("/api/goals/update/g2/user123")
-      .send({ current: 7 });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe("Goal updated successfully");
-  });
-
-  test("DELETE /api/goals/delete/:id/:userId deletes goal for userId", async () => {
+  test("DELETE /api/goals/delete/:id deletes goal", async () => {
     goalService.deleteGoal.mockResolvedValue(true);
 
-    const response = await request(app).delete("/api/goals/delete/g2/user123");
+    const response = await request(app).delete("/api/goals/delete/g1");
 
     expect(response.statusCode).toBe(200);
     expect(response.body.message).toBe("Goal deleted successfully");
+    expect(goalService.deleteGoal).toHaveBeenCalledWith("user123", "g1");
   });
 
-  test("DELETE /api/goals/delete/:id/:userId returns 404 if goal not found", async () => {
+  test("DELETE /api/goals/delete/:id returns 404 if goal not found", async () => {
     goalService.deleteGoal.mockResolvedValue(false);
 
-    const response = await request(app).delete(
-      "/api/goals/delete/unknown/user123",
-    );
+    const response = await request(app).delete("/api/goals/delete/unknown");
 
     expect(response.statusCode).toBe(404);
     expect(response.body.message).toBe("Goal not found");
+  });
+
+  // ==========================
+  // AUTH ERROR CASE
+  // ==========================
+
+  test("GET /api/goals/user returns 401 if token is invalid", async () => {
+    // Override the default mock to throw an error
+    getUserFromToken.mockImplementation(() => {
+      throw new Error("Invalid token");
+    });
+
+    const response = await request(app).get("/api/goals/user");
+
+    expect(response.statusCode).toBe(401);
+    expect(response.body.message).toContain("Invalid token");
   });
 });
