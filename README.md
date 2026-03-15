@@ -490,40 +490,245 @@ Performs advanced track search using the MusicBrainz API.
 | `page`    | Pagination page      | `page=2`                 |
 | `limit`   | Results per page     | `limit=25`               |
 
-## Advanced Movie Search
+# Movie Management API
 
-### `GET /api/movies/advanced/search`
+All movie routes require a valid JWT token unless otherwise specified.
 
-Performs advanced movie search using the OMDb API, with optional filtering by actor and genre.
+---
 
-| Parameter | Description                               | Example                   |
-| --------- | ----------------------------------------- | ------------------------- |
-| `q`       | General search query                      | `q=Inception`             |
-| `title`   | Exact movie title                         | `title=Inception`         |
-| `actor`   | Actor name (filters results)              | `actor=Leonardo DiCaprio` |
-| `genre`   | Genre name (filters results)              | `genre=Sci-Fi`            |
-| `year`    | Release year                              | `year=2010`               |
-| `type`    | Movie type (`movie`, `series`, `episode`) | `type=movie`              |
-| `page`    | Pagination page                           | `page=1`                  |
+## Endpoints
 
-**Notes:**
+### Search Movies (OMDb)
 
-- If `actor` or `genre` is provided, additional API calls are made to fetch full movie details for filtering.
-- Returns JSON:
+`GET /api/movie/search?q=<search_query>`
+
+Performs a basic search for movies using the OMDb API.
+
+**Query Parameters**
+
+| Parameter | Description         | Example       |
+| --------- | ------------------- | ------------- |
+| `q`       | Search query string | `q=Inception` |
+
+**Response**
 
 ```json
 {
-  "totalResults": 100,
+  "movies": [
+    {
+      "_id": "tt1375666",
+      "title": "Inception",
+      "year": "2010",
+      "poster": "https://example.com/poster.jpg",
+      "type": "movie"
+    }
+  ]
+}
+```
+
+---
+
+### Advanced Movie Search
+
+`GET /api/movie/advanced/search`
+
+Performs advanced movie search with optional filters including actor, genre, year, and type.
+
+**Query Parameters**
+
+| Parameter | Description                       | Example           |
+| --------- | --------------------------------- | ----------------- |
+| `q`       | General search query              | `q=Batman`        |
+| `title`   | Exact movie title                 | `title=Inception` |
+| `actor`   | Actor's name                      | `actor=DiCaprio`  |
+| `genre`   | Movie genre                       | `genre=Action`    |
+| `year`    | Release year                      | `year=2010`       |
+| `type`    | Type of media (`movie`, `series`) | `type=movie`      |
+| `page`    | Pagination page (default: 1)      | `page=2`          |
+
+**Response**
+
+```json
+{
+  "totalResults": 2,
   "page": 1,
   "movies": [
     {
       "_id": "tt1375666",
       "title": "Inception",
       "year": "2010",
-      "poster": "https://...",
+      "poster": "https://example.com/poster.jpg",
       "type": "movie"
     }
   ]
+}
+```
+
+---
+
+### Save Movie
+
+`POST /api/movie/`
+
+Saves a movie to the database.
+
+**Request Body**
+
+```json
+{
+  "_id": "tt1375666",
+  "title": "Inception",
+  "year": "2010",
+  "poster": "https://example.com/poster.jpg",
+  "type": "movie"
+}
+```
+
+**Response**
+
+```json
+{
+  "_id": "tt1375666",
+  "title": "Inception",
+  "year": "2010",
+  "poster": "https://example.com/poster.jpg",
+  "type": "movie"
+}
+```
+
+---
+
+### Get All User Shelves
+
+`GET /api/movie/shelf`
+
+Retrieves all movie shelves for the authenticated user.
+
+**Response**
+
+```json
+{
+  "watched": [],
+  "favorites": [],
+  "toWatch": []
+}
+```
+
+---
+
+### Get Specific User Shelf
+
+`GET /api/movie/shelf/:shelf`
+
+Retrieves all movies from a specific user shelf.
+
+**Parameters**
+
+| Parameter | Description            |
+| --------- | ---------------------- |
+| `shelf`   | Name of the user shelf |
+
+**Response**
+
+```json
+[
+  {
+    "_id": "tt1375666",
+    "title": "Inception",
+    "year": "2010",
+    "poster": "https://example.com/poster.jpg",
+    "type": "movie"
+  }
+]
+```
+
+---
+
+### Get Movie By ID
+
+`GET /api/movie/:id`
+
+Fetches movie details by its ID.
+
+**Parameters**
+
+| Parameter | Description   |
+| --------- | ------------- |
+| `id`      | IMDB movie ID |
+
+**Response**
+
+```json
+{
+  "_id": "tt1375666",
+  "title": "Inception",
+  "year": "2010",
+  "poster": "https://example.com/poster.jpg",
+  "type": "movie"
+}
+```
+
+---
+
+### Add Movie to User Shelf
+
+`POST /api/movie/shelf/add`
+
+Adds a movie to a user-defined shelf. If the movie does not exist in the database, it will be saved first.
+
+**Request Body**
+
+```json
+{
+  "shelf": "favorites",
+  "_id": "tt1375666",
+  "title": "Inception",
+  "year": "2010",
+  "poster": "https://example.com/poster.jpg",
+  "type": "movie"
+}
+```
+
+**Response**
+
+```json
+{
+  "message": "Movie added",
+  "shelf": "favorites",
+  "movie": {
+    "_id": "tt1375666",
+    "title": "Inception",
+    "year": "2010",
+    "poster": "https://example.com/poster.jpg",
+    "type": "movie"
+  }
+}
+```
+
+---
+
+### Remove Movie from User Shelf
+
+`POST /api/movie/shelf/remove`
+
+Removes a movie from a user-defined shelf.
+
+**Request Body**
+
+```json
+{
+  "movieId": "tt1375666",
+  "shelf": "favorites"
+}
+```
+
+**Response**
+
+```json
+{
+  "message": "Movie removed",
+  "shelf": "favorites",
+  "movieId": "tt1375666"
 }
 ```
 
