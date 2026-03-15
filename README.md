@@ -490,6 +490,43 @@ Performs advanced track search using the MusicBrainz API.
 | `page`    | Pagination page      | `page=2`                 |
 | `limit`   | Results per page     | `limit=25`               |
 
+## Advanced Movie Search
+
+### `GET /api/movies/advanced/search`
+
+Performs advanced movie search using the OMDb API, with optional filtering by actor and genre.
+
+| Parameter | Description                               | Example                   |
+| --------- | ----------------------------------------- | ------------------------- |
+| `q`       | General search query                      | `q=Inception`             |
+| `title`   | Exact movie title                         | `title=Inception`         |
+| `actor`   | Actor name (filters results)              | `actor=Leonardo DiCaprio` |
+| `genre`   | Genre name (filters results)              | `genre=Sci-Fi`            |
+| `year`    | Release year                              | `year=2010`               |
+| `type`    | Movie type (`movie`, `series`, `episode`) | `type=movie`              |
+| `page`    | Pagination page                           | `page=1`                  |
+
+**Notes:**
+
+- If `actor` or `genre` is provided, additional API calls are made to fetch full movie details for filtering.
+- Returns JSON:
+
+```json
+{
+  "totalResults": 100,
+  "page": 1,
+  "movies": [
+    {
+      "_id": "tt1375666",
+      "title": "Inception",
+      "year": "2010",
+      "poster": "https://...",
+      "type": "movie"
+    }
+  ]
+}
+```
+
 ## Reflections
 
 Reflections are user notes or thoughts about a media item, optionally including progress, mood tags, feelings, and metadata.
