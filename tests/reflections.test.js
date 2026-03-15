@@ -68,7 +68,10 @@ describe("Reflection Routes", () => {
     const response = await request(app).get("/api/reflection/user");
 
     expect(response.statusCode).toBe(200);
-    expect(response.body.length).toBe(1);
+    // Access the reflections array
+    expect(response.body.reflections.length).toBe(1);
+    expect(response.body.total).toBe(1);
+    expect(response.body.page).toBe(1);
   });
 
   // ================= GET REFLECTIONS FOR ITEM =================

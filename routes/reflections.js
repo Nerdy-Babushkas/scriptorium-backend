@@ -64,12 +64,30 @@ router.post("/add", async (req, res) => {
   }
 });
 
-// ================= GET ALL USER REFLECTIONS =================
+// ================= GET PAGINATED USER REFLECTIONS =================
 router.get("/user", async (req, res) => {
   try {
     const user = getUserFromToken(req);
-    const reflections = await reflectionService.getUserReflections(user._id);
-    res.json(reflections);
+
+    // Get page & limit from query params, default to 1 & 10
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Fetch all reflections for the user
+    const allReflections = await reflectionService.getUserReflections(user._id);
+
+    // Sort by date descending (latest first)
+    allReflections.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Slice for pagination
+    const paginated = allReflections.slice((page - 1) * limit, page * limit);
+
+    res.json({
+      reflections: paginated,
+      total: allReflections.length,
+      page,
+      limit,
+    });
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
