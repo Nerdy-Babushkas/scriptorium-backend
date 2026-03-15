@@ -12,6 +12,7 @@ router.post("/add", async (req, res) => {
     const {
       itemId,
       itemType,
+      title = "",
       text,
       moodTags = [],
       feelings = [],
@@ -20,15 +21,24 @@ router.post("/add", async (req, res) => {
       date = new Date(),
     } = req.body;
 
+    // Required fields check
     if (!itemId || !itemType || !text) {
       return res.status(400).json({
         message: "itemId, itemType, and text are required",
       });
     }
 
+    // Text length validation
     if (text.length < 30 || text.length > 2000) {
       return res.status(400).json({
         message: "Reflection text must be between 30 and 2000 characters",
+      });
+    }
+
+    // Optional: title validation
+    if (title && title.length > 200) {
+      return res.status(400).json({
+        message: "Reflection title must be less than 200 characters",
       });
     }
 
@@ -36,6 +46,7 @@ router.post("/add", async (req, res) => {
       user: user._id,
       item: itemId,
       itemType,
+      title,
       text,
       moodTags,
       feelings,
