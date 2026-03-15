@@ -114,7 +114,7 @@ router.post("/shelf/add", async (req, res) => {
       });
     }
 
-    // 1️⃣ Check if movie exists
+    // 1. Check if movie exists
     let movie = await movieService
       .getMovieById(movieData._id)
       .catch(() => null);
@@ -123,7 +123,7 @@ router.post("/shelf/add", async (req, res) => {
       movie = await movieService.saveMovie(movieData);
     }
 
-    // 2️⃣ Add to shelf
+    // 2. Add to shelf
     const result = await movieService.addMovieToShelf(
       user._id,
       movie._id,
@@ -164,6 +164,79 @@ router.post("/shelf/remove", async (req, res) => {
   } catch (err) {
     console.error("Remove shelf error:", err.message);
     res.status(401).json({ message: err.message });
+  }
+});
+
+// =====================================================
+// ================= ADVANCED SEARCH =================
+// =====================================================
+router.get("/advanced/search", async (req, res) => {
+  try {
+    const { q, title, actor, genre, year, page = 1, type } = req.query;
+    const apiKey = process.env.OMDB_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ message: "OMDb API key not set" });
+    }
+
+    if (!q && !title && !actor && !genre && !year) {
+      return res
+        .status(400)
+        .json({ message: "Provide at least one search parameter" });
+    }
+
+    // Use 's' search or exact title 't'
+    const searchTerm = q || title || "";
+    const searchUrl = `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(
+      searchTerm,
+    )}&page=${page}${type ? `&type=${type}` : ""}${year ? `&y=${year}` : ""}`;
+
+    console.log("OMDb search URL:", searchUrl);
+    const response = await axios.get(searchUrl);
+
+    if (response.data.Response === "False") {
+      return res.json({ totalResults: 0, page: Number(page), movies: [] });
+    }
+
+    let movies = response.data.Search.map((item) => ({
+      _id: item.imdbID,
+      title: item.Title,
+      year: item.Year,
+      poster: item.Poster,
+      type: item.Type,
+    }));
+
+    // Filter by actor or genre if requested
+    if (actor || genre) {
+      const filtered = [];
+      for (const movie of movies) {
+        const detailRes = await axios.get(
+          `https://www.omdbapi.com/?apikey=${apiKey}&i=${movie._id}`,
+        );
+        const data = detailRes.data;
+        let matches = true;
+        if (actor)
+          matches =
+            matches && data.Actors?.toLowerCase().includes(actor.toLowerCase());
+        if (genre)
+          matches =
+            matches && data.Genre?.toLowerCase().includes(genre.toLowerCase());
+        if (matches) filtered.push(movie);
+      }
+      movies = filtered;
+    }
+
+    res.json({
+      totalResults: Number(response.data.totalResults),
+      page: Number(page),
+      movies,
+    });
+  } catch (err) {
+    console.error("Advanced OMDb search error:", err.message);
+    res.status(500).json({
+      message: "Error performing advanced OMDb search",
+      error: err.message,
+    });
   }
 });
 
