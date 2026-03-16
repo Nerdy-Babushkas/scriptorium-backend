@@ -18,12 +18,10 @@ const updateGoalProgress = async (userId, goalId, currentValue) => {
 
   if (!goal) return null;
 
-  // Clamp progress
   const newCurrent = Math.max(0, Math.min(currentValue, goal.total));
 
   goal.current = newCurrent;
 
-  // Update status correctly
   if (goal.current >= goal.total) {
     goal.status = "completed";
   } else {
@@ -40,6 +38,7 @@ const updateGoal = async (userId, goalId, data) => {
   if (data.title !== undefined) goal.title = data.title;
   if (data.type !== undefined) goal.type = data.type;
   if (data.total !== undefined) goal.total = Number(data.total);
+  if (data.media !== undefined) goal.media = data.media;
 
   if (data.current !== undefined) {
     goal.current = Math.max(0, Math.min(Number(data.current), goal.total));

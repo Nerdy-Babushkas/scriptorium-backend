@@ -20,7 +20,7 @@ router.get("/user", async (req, res) => {
 router.post("/add", async (req, res) => {
   try {
     const user = getUserFromToken(req);
-    const { title, type, current = 0, total } = req.body;
+    const { title, type, current = 0, total, media = null } = req.body;
 
     if (!title || !type || total == null) {
       return res
@@ -33,6 +33,7 @@ router.post("/add", async (req, res) => {
       type,
       current,
       total,
+      media,
     });
 
     res.json({
@@ -81,13 +82,14 @@ router.put("/update/:id", async (req, res) => {
   try {
     const user = getUserFromToken(req);
 
-    const { title, type, total, current } = req.body;
+    const { title, type, total, current, media } = req.body;
 
     const goal = await goalService.updateGoal(user._id, req.params.id, {
       title,
       type,
       total,
       current,
+      media,
     });
 
     if (!goal) return res.status(404).json({ message: "Goal not found" });
