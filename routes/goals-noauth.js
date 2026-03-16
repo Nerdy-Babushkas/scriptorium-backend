@@ -16,9 +16,9 @@ router.get("/user/:userId", async (req, res) => {
 // ADD goal (expects userId in body)
 router.post("/add", async (req, res) => {
   try {
-    const { userId, title, type, current = 0, total } = req.body;
+    const { userId, title, type, current = 0, total, media = null } = req.body;
 
-    if (!userId || !title || !type || !total) {
+    if (!userId || !title || !type || total == null) {
       return res
         .status(400)
         .json({ message: "userId, title, type and total are required" });
@@ -29,6 +29,7 @@ router.post("/add", async (req, res) => {
       type,
       current,
       total,
+      media,
     });
 
     res.json({ message: "Goal created successfully", goal });
@@ -37,18 +38,22 @@ router.post("/add", async (req, res) => {
   }
 });
 
-// UPDATE goal progress (expects userId in body)
+// UPDATE whole goal (expects userId in body)
 router.put("/update/:id", async (req, res) => {
   try {
-    const { userId, current } = req.body;
+    const { userId, title, type, total, current, media } = req.body;
 
-    if (!userId) return res.status(400).json({ message: "userId required" });
+    if (!userId) {
+      return res.status(400).json({ message: "userId required" });
+    }
 
-    const goal = await goalService.updateGoalProgress(
-      userId,
-      req.params.id,
+    const goal = await goalService.updateGoal(userId, req.params.id, {
+      title,
+      type,
+      total,
       current,
-    );
+      media,
+    });
 
     if (!goal) return res.status(404).json({ message: "Goal not found" });
 
