@@ -1,4 +1,4 @@
-const Goal = require('../models/Goal');
+const Goal = require("../models/Goal");
 
 const getGoalsByUser = async (userId) => {
   return await Goal.find({ user: userId });
@@ -7,29 +7,60 @@ const getGoalsByUser = async (userId) => {
 const createGoal = async (userId, goalData) => {
   const newGoal = new Goal({
     user: userId,
-    ...goalData
+    ...goalData,
   });
 
   return await newGoal.save();
 };
 
-
 const updateGoalProgress = async (userId, goalId, currentValue) => {
+  const goal = await Goal.findOne({ _id: goalId, user: userId });
+
+  if (!goal) return null;
+
+  // Clamp progress
+  const newCurrent = Math.max(0, Math.min(currentValue, goal.total));
+
+  goal.current = newCurrent;
+
+  // Update status correctly
+  if (goal.current >= goal.total) {
+    goal.status = "completed";
+  } else {
+    goal.status = "active";
+  }
+
+  return await goal.save();
+};
+
+const updateGoal = async (userId, goalId, data) => {
   const goal = await Goal.findOne({ _id: goalId, user: userId });
   if (!goal) return null;
 
-  goal.current = currentValue;
+  if (data.title !== undefined) goal.title = data.title;
+  if (data.type !== undefined) goal.type = data.type;
+  if (data.total !== undefined) goal.total = Number(data.total);
+
+  if (data.current !== undefined) {
+    goal.current = Math.max(0, Math.min(Number(data.current), goal.total));
+  }
 
   if (goal.current >= goal.total) {
-    goal.status = 'completed';
+    goal.status = "completed";
+  } else {
+    goal.status = "active";
   }
 
   return await goal.save();
 };
 
 const deleteGoal = async (userId, goalId) => {
-  const result = await Goal.findOneAndDelete({ _id: goalId, user: userId });
-  return result; // null if not found
+  const result = await Goal.findOneAndDelete({
+    _id: goalId,
+    user: userId,
+  });
+
+  return result;
 };
 
 module.exports = {
@@ -37,6 +68,5 @@ module.exports = {
   createGoal,
   updateGoalProgress,
   deleteGoal,
+  updateGoal,
 };
-
-
