@@ -8,6 +8,7 @@ const { getUserFromToken } = require("../services/user-service");
 const musicService = require("../services/music-service");
 
 // ================= SEARCH MUSIC =================
+
 router.get("/search", async (req, res) => {
   const { q, page = 1, limit = 20 } = req.query;
 
@@ -21,6 +22,7 @@ router.get("/search", async (req, res) => {
     const currentPage = Number(page);
     const pageLimit = Number(limit);
     const offset = (currentPage - 1) * pageLimit;
+
     const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(
       q,
     )}&fmt=json&limit=${pageLimit}&offset=${offset}`;
@@ -32,20 +34,31 @@ router.get("/search", async (req, res) => {
     });
 
     const tracks =
-      response.data.recordings?.map((item) => ({
-        _id: item.id,
-        title: item.title,
-        artist: {
-          name: item["artist-credit"]?.[0]?.name || "Unknown",
-          mbid: item["artist-credit"]?.[0]?.artist?.id,
-        },
-        release: {
-          title: item.releases?.[0]?.title,
-          mbid: item.releases?.[0]?.id,
-          date: item.releases?.[0]?.date,
-        },
-        duration: item.length,
-      })) || [];
+      (response.data.recordings || []).map((item) => {
+        const release = item.releases?.[0] || {};
+        const releaseMbid = release.id;
+
+        // Construct Cover Art Archive URL
+        const coverUrl = releaseMbid
+          ? `https://coverartarchive.org/release/${releaseMbid}/front-250` // small thumbnail
+          : "https://via.placeholder.com/250?text=No+Cover";
+
+        return {
+          _id: item.id,
+          title: item.title,
+          artist: {
+            name: item["artist-credit"]?.[0]?.name || "Unknown",
+            mbid: item["artist-credit"]?.[0]?.artist?.id,
+          },
+          release: {
+            title: release.title,
+            mbid: release.id,
+            date: release.date,
+          },
+          duration: item.length,
+          coverUrl, // <-- added here
+        };
+      }) || [];
 
     res.json({ tracks });
   } catch (err) {
