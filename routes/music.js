@@ -41,7 +41,7 @@ router.get("/search", async (req, res) => {
         // Construct Cover Art Archive URL
         const coverUrl = releaseMbid
           ? `https://coverartarchive.org/release/${releaseMbid}/front-250` // small thumbnail
-          : "https://via.placeholder.com/250?text=No+Cover";
+          : null;
 
         return {
           _id: item.id,
