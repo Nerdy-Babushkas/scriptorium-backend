@@ -8,7 +8,7 @@ const goalSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['book', 'music', 'podcast'],
+    enum: ['book', 'music', 'movies'],
     required: true
   },
   title: {
@@ -27,6 +27,10 @@ const goalSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'completed'],
     default: 'active'
+  },
+  media: {
+    type: Object,
+    default: null
   }
 }, { timestamps: true });
 
