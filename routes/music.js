@@ -56,7 +56,7 @@ router.get("/search", async (req, res) => {
             date: release.date,
           },
           duration: item.length,
-          coverUrl, // <-- added here
+          coverUrl,
         };
       }) || [];
 
@@ -191,11 +191,13 @@ router.get("/advanced/search", async (req, res) => {
       });
     }
 
-    const offset = (page - 1) * limit;
+    const currentPage = Number(page);
+    const pageLimit = Number(limit);
+    const offset = (currentPage - 1) * pageLimit;
 
     const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(
       queryParts.join(" "),
-    )}&fmt=json&limit=${limit}&offset=${offset}`;
+    )}&fmt=json&limit=${pageLimit}&offset=${offset}`;
 
     const response = await axios.get(url, {
       headers: {
@@ -204,24 +206,34 @@ router.get("/advanced/search", async (req, res) => {
     });
 
     const tracks =
-      response.data.recordings?.map((item) => ({
-        _id: item.id,
-        title: item.title,
-        artist: {
-          name: item["artist-credit"]?.[0]?.name || "Unknown",
-          mbid: item["artist-credit"]?.[0]?.artist?.id,
-        },
-        release: {
-          title: item.releases?.[0]?.title,
-          mbid: item.releases?.[0]?.id,
-          date: item.releases?.[0]?.date,
-        },
-        duration: item.length,
-      })) || [];
+      (response.data.recordings || []).map((item) => {
+        const releaseData = item.releases?.[0] || {};
+        const releaseMbid = releaseData.id;
+
+        const coverUrl = releaseMbid
+          ? `https://coverartarchive.org/release/${releaseMbid}/front-250`
+          : null;
+
+        return {
+          _id: item.id,
+          title: item.title,
+          artist: {
+            name: item["artist-credit"]?.[0]?.name || "Unknown",
+            mbid: item["artist-credit"]?.[0]?.artist?.id,
+          },
+          release: {
+            title: releaseData.title,
+            mbid: releaseData.id,
+            date: releaseData.date,
+          },
+          duration: item.length,
+          coverUrl,
+        };
+      }) || [];
 
     res.json({
       totalResults: response.data.count || 0,
-      page: Number(page),
+      page: currentPage,
       tracks,
     });
   } catch (err) {
