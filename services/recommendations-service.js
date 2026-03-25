@@ -26,7 +26,7 @@ function getClient() {
 async function getRecommendations(userPrompt) {
   try {
     const response = await getClient().chat.completions.create({
-      model: "nvidia/nemotron-3-super-120b-a12b:free",
+      model: process.env.AI_MODEL || "nvidia/nemotron-3-super-120b-a12b:free",
       temperature: 0.2, // low for consistent JSON
       max_tokens: 1200,
       messages: [
