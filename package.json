@@ -16,6 +16,7 @@
     "mongoose": "^9.1.5",
     "musicbrainz-api": "^1.1.0",
     "nodemailer": "^7.0.13",
+    "openai": "^6.32.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1"
   },
