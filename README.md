@@ -58,7 +58,7 @@ Base URL: https://scriptorium-backend-six.vercel.app/
 { "bookId": "bookId", "shelf": "favorites" }
 ```
 
-`**Response (Success):**
+**Response (Success):**
 
 ```json
 {
