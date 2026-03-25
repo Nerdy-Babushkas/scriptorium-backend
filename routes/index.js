@@ -17,5 +17,6 @@ router.use("/music", musicRoutes);
 router.use("/goals", goalRoutes);
 router.use("/reflection", reflectionRoutes);
 router.use("/movies", movieRoutes);
+router.use("/recommendations", require("./recommendations"));
 
 module.exports = router;
