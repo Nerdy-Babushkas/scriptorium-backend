@@ -58,7 +58,7 @@ Base URL: https://scriptorium-backend-six.vercel.app/
 { "bookId": "bookId", "shelf": "favorites" }
 ```
 
-`**Response (Success):**
+**Response (Success):**
 
 ```json
 {
@@ -135,7 +135,7 @@ Returns the health status of the API: { "status": "UsersAPI OK" }
 }
 ```
 
-**Usage Notes:** - The `token` is a JWT containing the user information: { "\_id": "<userId>", "userName": "johnDoe", "email": "john@example.com" } - The frontend should store this token (e.g., localStorage or cookie) and send it in the `Authorization` header for protected routes: Authorization: jwt <JWT_TOKEN>
+**Usage Notes:** - The `token` is a JWT containing the user information: { "\_id": "<userId>", "userName": "johnDoe", "email": "john@example.com" }. The frontend should store this token (e.g., localStorage or cookie) and send it in the `Authorization` header for protected routes: Authorization: jwt <JWT_TOKEN>
 
 ---
 

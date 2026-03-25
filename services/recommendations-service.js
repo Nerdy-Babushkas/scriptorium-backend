@@ -2,21 +2,30 @@
 require("dotenv").config();
 const OpenAI = require("openai");
 
-// ---------- Client setup ----------
-let client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-});
+// ---------- Client (lazy initialization) ----------
+let client;
 
 // ---------- Helper for testing ----------
 function __setClientForTest(mockClient) {
   client = mockClient;
 }
 
+// ---------- Get or create client ----------
+function getClient() {
+  if (client) return client; // use mock if set
+
+  client = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1",
+  });
+
+  return client;
+}
+
 // ================= GET AI RECOMMENDATIONS =================
 async function getRecommendations(userPrompt) {
   try {
-    const response = await client.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: "nvidia/nemotron-3-super-120b-a12b:free",
       temperature: 0.2, // low for consistent JSON
       max_tokens: 1200,
@@ -77,14 +86,7 @@ Rules:
       }
     }
 
-    if (parsed?.recommendations) {
-      return parsed.recommendations;
-    } else {
-      console.warn(
-        "Could not parse valid recommendations. Returning empty array.",
-      );
-      return [];
-    }
+    return parsed?.recommendations || [];
   } catch (err) {
     console.error("AI request failed:", err);
     return [];
