@@ -53,6 +53,8 @@ const userSchema = new mongoose.Schema(
     media_placements: { type: [Object], default: [] },
 
     last_login: Date,
+
+    showTips: { type: Boolean, default: true},
   },
   { timestamps: true },
 );

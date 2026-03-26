@@ -30,6 +30,8 @@ module.exports.registerUser = async function (userData) {
     password: hash,
     verificationToken,
     verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+
+    showTips: true,
   });
 
   try {
@@ -98,4 +100,23 @@ module.exports.getUserFromToken = function (req) {
 
   // decodedUser contains { _id, userName, email }
   return decodedUser;
+};
+
+// ============================
+// ✅ NEW: GET USER BY ID
+// ============================
+module.exports.getUserById = async function (userId) {
+  return await User.findById(userId);
+};
+
+// ============================
+// ✅ NEW: UPDATE USER (FOR showTips)
+// ============================
+module.exports.updateUser = async function (
+  userId,
+  updateData
+) {
+  return await User.findByIdAndUpdate(userId, updateData, {
+    new: true,
+  });
 };

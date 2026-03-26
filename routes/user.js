@@ -35,6 +35,53 @@ router.get("/verify", async (req, res) => {
   }
 });
 
+
+
+
+router.get("/tips", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userService.getUserById(decoded._id || decoded.id);
+
+    res.json({ showTips: user.showTips });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+
+router.patch("/tips", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { showTips } = req.body;
+
+    const updatedUser = await userService.updateUser(decoded._id || decoded.id, {
+      showTips,
+    });
+
+    res.json({
+      message: "showTips updated successfully",
+      showTips: updatedUser.showTips,
+    });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+
+
+
+
 // ================= LOGIN =================
 router.post("/login", async (req, res) => {
   try {
