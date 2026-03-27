@@ -43,7 +43,6 @@ passport.use(
 //
 app.use(express.json());
 app.use(cors());
-app.option("*", cors());
 app.use(passport.initialize());
 
 //
