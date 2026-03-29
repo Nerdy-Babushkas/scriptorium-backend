@@ -41,7 +41,7 @@ Return exactly 5 recommendations in JSON only, in this format:
     {
       "title": "...",
       "year": 2000,
-      "director": "...",
+      "author": "...",
       "reason": "...",
       "tags": ["..."]
     }
