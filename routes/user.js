@@ -38,43 +38,63 @@ router.get("/verify", async (req, res) => {
 
 
 
+// ================= GET TIPS =================
 router.get("/tips", async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+    if (!authHeader || !authHeader.startsWith("jwt ")) {
+      return res.status(401).json({ message: "Invalid auth format" });
     }
 
+    const token = authHeader.split(" ")[1];
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const user = await userService.getUserById(decoded._id || decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     res.json({ showTips: user.showTips });
   } catch (err) {
+    console.error("GET /tips error:", err);
     res.status(401).json({ message: "Invalid token" });
   }
 });
 
+
+// ================= UPDATE TIPS =================
 router.patch("/tips", async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+    if (!authHeader || !authHeader.startsWith("jwt ")) {
+      return res.status(401).json({ message: "Invalid auth format" });
     }
 
+    const token = authHeader.split(" ")[1];
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     const { showTips } = req.body;
 
-    const updatedUser = await userService.updateUser(decoded._id || decoded.id, {
-      showTips,
-    });
+    const updatedUser = await userService.updateUser(
+      decoded._id || decoded.id,
+      { showTips }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     res.json({
       message: "showTips updated successfully",
       showTips: updatedUser.showTips,
     });
   } catch (err) {
+    console.error("PATCH /tips error:", err);
     res.status(401).json({ message: "Invalid token" });
   }
 });
