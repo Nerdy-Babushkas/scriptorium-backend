@@ -29,8 +29,7 @@ module.exports.registerUser = async function (userData) {
     email: userData.email.trim(),
     password: hash,
     verificationToken,
-    verificationTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
-
+    verificationTokenExpires: new Date(Date.now() + 60 * 60 * 3000),
     showTips: true,
   });
 

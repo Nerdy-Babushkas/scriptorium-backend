@@ -5,20 +5,16 @@ const OpenAI = require("openai");
 // ---------- Client (lazy initialization) ----------
 let client;
 
-// ---------- Helper for testing ----------
 function __setClientForTest(mockClient) {
   client = mockClient;
 }
 
-// ---------- Get or create client ----------
 function getClient() {
-  if (client) return client; // use mock if set
-
+  if (client) return client;
   client = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY,
     baseURL: "https://openrouter.ai/api/v1",
   });
-
   return client;
 }
 
@@ -27,34 +23,27 @@ async function getRecommendations(userPrompt) {
   try {
     const response = await getClient().chat.completions.create({
       model: process.env.AI_MODEL || "nvidia/nemotron-3-super-120b-a12b:free",
-      temperature: 0.2, // low for consistent JSON
-      max_tokens: 1200,
+      temperature: 0.2,
+      max_tokens: 2000,
       messages: [
         {
           role: "system",
           content: `
 You are a recommendation assistant.
-Return exactly 5 recommendations in JSON only, in this format:
+Return exactly 5 recommendations as a JSON object only — no markdown, no code fences, no extra text before or after.
 
-{
-  "recommendations": [
-    {
-      "title": "...",
-      "year": 2000,
-      "director": "...",
-      "reason": "...",
-      "tags": ["..."]
-    }
-  ]
-}
+The JSON format to use depends on the user's request:
+- For movies:  { "recommendations": [{ "title": "...", "year": 2000, "director": "...", "reason": "...", "tags": ["..."] }] }
+- For music:   { "recommendations": [{ "title": "...", "artist": "...", "album": "...", "year": 2000, "reason": "...", "tags": ["..."] }] }
+- For books:   { "recommendations": [{ "title": "...", "author": "...", "year": 2000, "reason": "...", "tags": ["..."] }] }
 
 Rules:
-- Keep reason 1-2 sentences max.
-- Include 2-3 tags.
-- Fill in year and director if known.
-- Do not include extra text outside JSON.
-- If output is truncated, return only valid JSON.
-          `,
+- Use the format that matches what the user is asking for.
+- Keep reason to 1-2 sentences.
+- Include 2-3 tags per item.
+- Do NOT include any text outside the JSON object.
+- If your output would be truncated, stop at the last complete item and close the JSON properly.
+          `.trim(),
         },
         { role: "user", content: userPrompt },
       ],
@@ -67,22 +56,25 @@ Rules:
       return [];
     }
 
-    // Attempt strict JSON parse first
+    // Strip accidental markdown fences if model ignores instructions
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/, "")
+      .trim();
+
     let parsed;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(cleaned);
     } catch {
-      // Fallback: parse up to last closing brace
-      const lastBrace = raw.lastIndexOf("}");
+      // Fallback: truncate to last valid closing brace
+      const lastBrace = cleaned.lastIndexOf("}");
       if (lastBrace !== -1) {
         try {
-          parsed = JSON.parse(raw.slice(0, lastBrace + 1));
+          parsed = JSON.parse(cleaned.slice(0, lastBrace + 1));
         } catch (err) {
           console.warn("Fallback JSON parse failed.", err);
           parsed = null;
         }
-      } else {
-        parsed = null;
       }
     }
 
@@ -93,8 +85,7 @@ Rules:
   }
 }
 
-// ===== CommonJS export =====
 module.exports = {
   getRecommendations,
-  __setClientForTest, // for testing only
+  __setClientForTest,
 };
