@@ -171,4 +171,242 @@ describe("User Service", () => {
       expect(result.userName).toBe("test");
     });
   });
+  // ========================= UPDATE USER PROFILE =========================
+  describe("updateUserProfile", () => {
+    test("should throw if user not found", async () => {
+      User.findById.mockResolvedValue(null);
+
+      await expect(userService.updateUserProfile("u1", {})).rejects.toThrow(
+        "User not found",
+      );
+    });
+
+    test("should update username successfully", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        userName: "oldName",
+        email: "test@test.com",
+        ai_info: false,
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      const result = await userService.updateUserProfile("u1", {
+        userName: "newName",
+      });
+
+      expect(user.userName).toBe("newName");
+      expect(mockSave).toHaveBeenCalled();
+      expect(result.userName).toBe("newName");
+    });
+
+    test("should trim username", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        userName: "old",
+        email: "test@test.com",
+        ai_info: false,
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      await userService.updateUserProfile("u1", {
+        userName: "   trimmed   ",
+      });
+
+      expect(user.userName).toBe("trimmed");
+    });
+
+    test("should update ai_info successfully", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        userName: "test",
+        email: "test@test.com",
+        ai_info: false,
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      const result = await userService.updateUserProfile("u1", {
+        ai_info: true,
+      });
+
+      expect(user.ai_info).toBe(true);
+      expect(result.ai_info).toBe(true);
+    });
+
+    test("should update both username and ai_info", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        userName: "old",
+        email: "test@test.com",
+        ai_info: false,
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      const result = await userService.updateUserProfile("u1", {
+        userName: "newUser",
+        ai_info: true,
+      });
+
+      expect(user.userName).toBe("newUser");
+      expect(user.ai_info).toBe(true);
+      expect(result.userName).toBe("newUser");
+      expect(result.ai_info).toBe(true);
+    });
+
+    test("should not update fields if not provided", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        userName: "unchanged",
+        email: "test@test.com",
+        ai_info: false,
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      const result = await userService.updateUserProfile("u1", {});
+
+      expect(user.userName).toBe("unchanged");
+      expect(user.ai_info).toBe(false);
+      expect(result.userName).toBe("unchanged");
+    });
+  });
+
+  // ========================= UPDATE PASSWORD =========================
+  describe("updatePassword", () => {
+    test("should throw if missing passwords", async () => {
+      await expect(
+        userService.updatePassword("u1", null, null),
+      ).rejects.toThrow("Old and new password are required");
+    });
+
+    test("should throw if user not found", async () => {
+      User.findById.mockResolvedValue(null);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "Newpass1!"),
+      ).rejects.toThrow("User not found");
+    });
+
+    test("should throw if old password incorrect", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(false);
+
+      await expect(
+        userService.updatePassword("u1", "wrong", "Newpass1!"),
+      ).rejects.toThrow("Old password is incorrect");
+    });
+
+    test("should throw if password too short", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "Short1!"),
+      ).rejects.toThrow("Password must be at least 8 characters long.");
+    });
+
+    test("should throw if missing uppercase", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "lowercase1!"),
+      ).rejects.toThrow("Password must contain at least one uppercase letter.");
+    });
+
+    test("should throw if missing lowercase", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "UPPERCASE1!"),
+      ).rejects.toThrow("Password must contain at least one lowercase letter.");
+    });
+
+    test("should throw if missing number", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "NoNumber!"),
+      ).rejects.toThrow("Password must contain at least one number.");
+    });
+
+    test("should throw if missing special character", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "NoSpecial1"),
+      ).rejects.toThrow(
+        "Password must include at least one special character (!@#$...).",
+      );
+    });
+
+    test("should throw if new password same as old", async () => {
+      const user = { password: "hashed" };
+
+      User.findById.mockResolvedValue(user);
+
+      // First compare = old password check → true
+      // Second compare = same password check → true
+      bcrypt.compare.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+
+      await expect(
+        userService.updatePassword("u1", "oldPass", "Oldpass1!"),
+      ).rejects.toThrow("New password must be different from old password.");
+    });
+
+    test("should update password successfully", async () => {
+      const mockSave = jest.fn().mockResolvedValue(true);
+
+      const user = {
+        password: "hashed",
+        save: mockSave,
+      };
+
+      User.findById.mockResolvedValue(user);
+
+      bcrypt.compare
+        .mockResolvedValueOnce(true) // old password match
+        .mockResolvedValueOnce(false); // new != old
+
+      bcrypt.hash.mockResolvedValue("newHashed");
+
+      const result = await userService.updatePassword(
+        "u1",
+        "oldPass",
+        "ValidPass1!",
+      );
+
+      expect(user.password).toBe("newHashed");
+      expect(mockSave).toHaveBeenCalled();
+      expect(result.message).toBe("Password updated successfully");
+    });
+  });
 });
