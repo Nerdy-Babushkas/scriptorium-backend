@@ -99,3 +99,90 @@ module.exports.getUserFromToken = function (req) {
   // decodedUser contains { _id, userName, email }
   return decodedUser;
 };
+
+// UPDATE USER PROFILE (username, ai_info, etc)
+module.exports.updateUserProfile = async function (userId, updateData) {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  // ================= USERNAME =================
+  if (updateData.userName !== undefined) {
+    const name = updateData.userName.trim();
+
+    user.userName = name;
+  }
+
+  // ================= AI PERMISSION =================
+  if (typeof updateData.ai_info === "boolean") {
+    user.ai_info = updateData.ai_info;
+  }
+
+  await user.save();
+
+  return {
+    userName: user.userName,
+    email: user.email,
+    ai_info: user.ai_info,
+  };
+};
+
+// UPDATE PASSWORD
+module.exports.updatePassword = async function (
+  userId,
+  oldPassword,
+  newPassword,
+) {
+  if (!oldPassword || !newPassword) {
+    throw new Error("Old and new password are required");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  // ================= VERIFY OLD PASSWORD =================
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) throw new Error("Old password is incorrect");
+
+  // ================= PASSWORD VALIDATION =================
+
+  // Length
+  if (newPassword.length < 8) {
+    throw new Error("Password must be at least 8 characters long.");
+  }
+
+  // Uppercase
+  if (!/[A-Z]/.test(newPassword)) {
+    throw new Error("Password must contain at least one uppercase letter.");
+  }
+
+  // Lowercase
+  if (!/[a-z]/.test(newPassword)) {
+    throw new Error("Password must contain at least one lowercase letter.");
+  }
+
+  // Number
+  if (!/\d/.test(newPassword)) {
+    throw new Error("Password must contain at least one number.");
+  }
+
+  // Special character
+  if (!/[!_@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+    throw new Error(
+      "Password must include at least one special character (!@#$...).",
+    );
+  }
+
+  // Optional: prevent reusing same password
+  const samePassword = await bcrypt.compare(newPassword, user.password);
+  if (samePassword) {
+    throw new Error("New password must be different from old password.");
+  }
+
+  // ================= SAVE =================
+  const hash = await bcrypt.hash(newPassword, 10);
+  user.password = hash;
+
+  await user.save();
+
+  return { message: "Password updated successfully" };
+};

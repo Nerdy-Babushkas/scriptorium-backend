@@ -90,4 +90,32 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+router.patch("/account", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+
+    const updatedUser = await userService.updateUserProfile(user._id, req.body);
+
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.patch("/account/password", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+
+    const result = await userService.updatePassword(
+      user._id,
+      req.body.oldPassword,
+      req.body.newPassword,
+    );
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 module.exports = router;
