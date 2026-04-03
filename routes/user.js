@@ -90,6 +90,18 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+// ================= GET PROFILE DATA =================
+router.get("/account", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+    const profile = await userService.getUserProfile(user._id);
+    res.json(profile);
+  } catch (err) {
+    // 401 Unauthorized because the token check likely failed
+    res.status(401).json({ message: err.message });
+  }
+});
+
 router.patch("/account", async (req, res) => {
   try {
     const user = userService.getUserFromToken(req);

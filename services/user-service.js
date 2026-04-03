@@ -190,3 +190,14 @@ module.exports.updatePassword = async function (
 
   return { message: "Password updated successfully" };
 };
+
+// GET USER PROFILE
+module.exports.getUserProfile = async function (userId) {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  return {
+    userName: user.userName,
+    ai_info: user.ai_info,
+  };
+};
