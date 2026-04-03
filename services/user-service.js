@@ -90,14 +90,18 @@ module.exports.getUserFromToken = function (req) {
   const authHeader = req.headers.authorization;
   if (!authHeader) throw new Error("Missing Authorization header");
 
-  const token = authHeader.startsWith("jwt ")
-    ? authHeader.slice(4)
-    : authHeader;
+  const parts = authHeader.split(" ");
+  const token = parts.length === 2 ? parts[1] : authHeader;
 
-  const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
-
-  // decodedUser contains { _id, userName, email }
-  return decodedUser;
+  try {
+    const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+    return decodedUser;
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      throw new Error("Your session has expired. Please log in again.");
+    }
+    throw new Error("Invalid session. Please log in again.");
+  }
 };
 
 // UPDATE USER PROFILE (username, ai_info, etc)
