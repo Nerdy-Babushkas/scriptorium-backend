@@ -42,7 +42,14 @@ passport.use(
 // ===== Middleware =====
 //
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://scriptorium-frontend.vercel.app",
+    "https://scriptorium-frontend-git-harjas-nerdy-babushkas-projects.vercel.app"
+  ],
+  credentials: true
+}));
 app.use(passport.initialize());
 
 //
