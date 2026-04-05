@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const badgeService = require("./badge-service");
 require("../models/Bookshelf");
 require("../models/MusicShelf");
 
@@ -12,7 +13,6 @@ module.exports.registerUser = async function (userData) {
   if (!userData.password || !userData.password2) {
     throw new Error("Please fill both password fields");
   }
-
   if (userData.password !== userData.password2) {
     throw new Error("Passwords do not match");
   }
@@ -37,6 +37,13 @@ module.exports.registerUser = async function (userData) {
   } catch (err) {
     if (err.code === 11000) throw new Error("Email already registered");
     throw err;
+  }
+
+  // Award the welcome badge — non-fatal if it fails
+  try {
+    await badgeService.onUserJoined(newUser._id);
+  } catch (err) {
+    console.error("onUserJoined badge failed (non-fatal):", err.message);
   }
 
   return {
