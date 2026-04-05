@@ -44,9 +44,14 @@ const userSchema = new mongoose.Schema(
     },
 
     // ================= GAMIFICATION =================
+    // Badges and streaks live in their own collections (Badge, Streak).
+    // These counters here are cheap denormalised totals used only for badge
+    // threshold checks — avoids COUNT queries on every media-save action.
+    totalMediaSaved: { type: Number, default: 0 },
+    totalGoalsCompleted: { type: Number, default: 0 },
+
+    // Legacy fields kept for backwards compatibility — do not use in new code.
     points_balance: { type: Number, default: 0 },
-    reflections: { type: [Object], default: [] },
-    goals: { type: [Object], default: [] },
     achievements: { type: [Object], default: [] },
     owned_rewards: { type: [Object], default: [] },
     rooms: { type: [Object], default: [] },
