@@ -1,11 +1,13 @@
+// services/movie-service.js
 const Movie = require("../models/Movie");
 const User = require("../models/User");
+const badgeService = require("./badge-service");
+const { getTotalMediaCount } = require("./media-count-service");
 
 // ================= SAVE MOVIE =================
 async function saveMovie(movieData) {
   const existing = await Movie.findById(movieData._id);
-
-  if (existing) return existing; // avoid duplicates
+  if (existing) return existing;
 
   const movie = new Movie(movieData);
   return await movie.save();
@@ -36,7 +38,6 @@ async function addMovieToShelf(userId, movieId, shelfName) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Find shelf OR create it dynamically
   let shelf = user.movieshelves.find((s) => s.name === shelfName);
 
   if (!shelf) {
@@ -44,10 +45,19 @@ async function addMovieToShelf(userId, movieId, shelfName) {
     user.movieshelves.push(shelf);
   }
 
-  // Add movie if not already present
-  if (!shelf.movies.includes(movieId)) {
+  const isNew = !shelf.movies.includes(movieId);
+
+  if (isNew) {
     shelf.movies.push(movieId);
     await user.save();
+
+    // ── Gamification hook ───────────────────────────────────────────────────
+    try {
+      const total = await getTotalMediaCount(userId);
+      await badgeService.onMediaSaved(userId, total);
+    } catch (err) {
+      console.error("onMediaSaved badge failed (non-fatal):", err.message);
+    }
   }
 
   return { message: `Movie added to ${shelfName}` };
@@ -65,7 +75,6 @@ async function getUserShelf(userId, shelfName) {
   if (!user) throw new Error("User not found");
 
   const shelf = user.movieshelves.find((s) => s.name === shelfName);
-
   if (!shelf) return [];
 
   return await getMoviesByIds(shelf.movies);
@@ -106,7 +115,6 @@ async function removeMovieFromShelf(userId, movieId, shelfName) {
   if (!shelf) throw new Error("Shelf not found");
 
   const originalLength = shelf.movies.length;
-
   shelf.movies = shelf.movies.filter(
     (id) => id.toString() !== movieId.toString(),
   );
