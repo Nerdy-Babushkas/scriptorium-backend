@@ -10,6 +10,8 @@ const reflectionRoutes = require("./reflections");
 const goalRoutes = require("./goals");
 const movieRoutes = require("./movies");
 const recommendationsRoutes = require("./recommendations");
+const streakRoutes = require("./streaks");
+const badgesRoutes = require("./badges");
 
 // Mount routes
 router.use("/user", userRoutes);
@@ -19,5 +21,7 @@ router.use("/goals", goalRoutes);
 router.use("/reflection", reflectionRoutes);
 router.use("/movies", movieRoutes);
 router.use("/recommendations", recommendationsRoutes);
+router.use("/streaks", streakRoutes);
+router.use("/badges", badgesRoutes);
 
 module.exports = router;
