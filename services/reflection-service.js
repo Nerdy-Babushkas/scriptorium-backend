@@ -1,5 +1,7 @@
 // services/reflection-service.js
 const Reflection = require("../models/Reflection");
+const badgeService = require("./badge-service");
+const streakService = require("./streak-service");
 
 // ================= CREATE REFLECTION =================
 async function createReflection(reflectionData) {
@@ -15,7 +17,34 @@ async function createReflection(reflectionData) {
   }
 
   const reflection = new Reflection(reflectionData);
-  return await reflection.save();
+  await reflection.save();
+
+  // ── Gamification hooks ────────────────────────────────────────────────────
+  // Run in parallel — don't let a badge/streak error break the core action.
+  try {
+    const userId = reflectionData.user;
+
+    const [totalCount, streakResult] = await Promise.all([
+      Reflection.countDocuments({ user: userId }),
+      streakService.recordActivity(userId),
+    ]);
+
+    const reflectionBadges = await badgeService.onReflectionCreated(
+      userId,
+      totalCount,
+    );
+
+    // Attach any newly earned badges to the response so the frontend can toast them
+    reflection._newBadges = [...streakResult.newBadges, ...reflectionBadges];
+  } catch (gamificationErr) {
+    console.error(
+      "Gamification hook failed (non-fatal):",
+      gamificationErr.message,
+    );
+    reflection._newBadges = [];
+  }
+
+  return reflection;
 }
 
 // ================= GET USER REFLECTIONS =================
