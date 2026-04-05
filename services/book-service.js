@@ -1,12 +1,13 @@
 // services/book-service.js
 const Book = require("../models/Book");
 const User = require("../models/User");
+const badgeService = require("./badge-service");
+const { getTotalMediaCount } = require("./media-count-service");
 
 // ================= SAVE BOOK =================
 async function saveBook(bookData) {
   const existing = await Book.findById(bookData._id);
-
-  if (existing) return existing; // avoid duplicates
+  if (existing) return existing;
 
   const book = new Book(bookData);
   return await book.save();
@@ -26,29 +27,37 @@ async function getBooksByIds(bookIds) {
 
 // ================= ADD BOOK TO USER SHELF =================
 async function addBookToShelf(userId, bookId, shelfName) {
-  // 1. Allow all 4 shelf types
   const ALLOWED_SHELVES = ["favorites", "wishlist", "reading", "finished"];
-  
+
   if (!ALLOWED_SHELVES.includes(shelfName)) {
-    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
+    throw new Error(
+      `Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(", ")}`,
+    );
   }
 
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // 2. Find shelf OR create it if it doesn't exist
   let shelf = user.bookshelves.find((s) => s.name === shelfName);
-  
+
   if (!shelf) {
-      // Create the missing shelf dynamically
-      shelf = { name: shelfName, books: [] };
-      user.bookshelves.push(shelf);
+    shelf = { name: shelfName, books: [] };
+    user.bookshelves.push(shelf);
   }
 
-  // 3. Add book if not present
-  if (!shelf.books.includes(bookId)) {
+  const isNew = !shelf.books.includes(bookId);
+
+  if (isNew) {
     shelf.books.push(bookId);
     await user.save();
+
+    // ── Gamification hook ───────────────────────────────────────────────────
+    try {
+      const total = await getTotalMediaCount(userId);
+      await badgeService.onMediaSaved(userId, total);
+    } catch (err) {
+      console.error("onMediaSaved badge failed (non-fatal):", err.message);
+    }
   }
 
   return { message: `Book added to ${shelfName}` };
@@ -66,9 +75,7 @@ async function getUserShelf(userId, shelfName) {
   if (!user) throw new Error("User not found");
 
   const shelf = user.bookshelves.find((s) => s.name === shelfName);
-  
-  // Return empty list if shelf doesn't exist yet (instead of crashing)
-  if (!shelf) return []; 
+  if (!shelf) return [];
 
   return await getBooksByIds(shelf.books);
 }
@@ -78,7 +85,6 @@ async function getAllUserShelves(userId) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Helper to fetch books for a shelf, returns empty array if shelf doesn't exist
   const getShelfBooks = async (shelfName) => {
     const shelf = user.bookshelves.find((s) => s.name === shelfName);
     return await getBooksByIds(shelf?.books || []);
@@ -94,11 +100,12 @@ async function getAllUserShelves(userId) {
 
 // ================= REMOVE BOOK FROM USER SHELF =================
 async function removeBookFromShelf(userId, bookId, shelfName) {
-  // FIX: Updated list to include 'reading' and 'finished'
   const ALLOWED_SHELVES = ["favorites", "wishlist", "reading", "finished"];
 
   if (!ALLOWED_SHELVES.includes(shelfName)) {
-    throw new Error(`Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(', ')}`);
+    throw new Error(
+      `Invalid shelf name. Allowed: ${ALLOWED_SHELVES.join(", ")}`,
+    );
   }
 
   const user = await User.findById(userId);
@@ -108,8 +115,6 @@ async function removeBookFromShelf(userId, bookId, shelfName) {
   if (!shelf) throw new Error("Shelf not found");
 
   const originalLength = shelf.books.length;
-
-  // Remove book
   shelf.books = shelf.books.filter((id) => id.toString() !== bookId.toString());
 
   if (shelf.books.length === originalLength) {

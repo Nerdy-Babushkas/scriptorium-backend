@@ -5,11 +5,18 @@ const streakService = require("./streak-service");
 
 // ================= CREATE REFLECTION =================
 async function createReflection(reflectionData) {
-  // Avoid duplicate reflections for same user + item + date
+  // Avoid duplicate reflections for same user + item on the same calendar day.
+  // Match on a UTC-day window rather than an exact timestamp, so two saves
+  // within the same day are caught even if milliseconds differ.
+  const dayStart = new Date(reflectionData.date || Date.now());
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
   const existing = await Reflection.findOne({
     user: reflectionData.user,
     item: reflectionData.item,
-    date: reflectionData.date || { $exists: false },
+    date: { $gte: dayStart, $lt: dayEnd },
   });
 
   if (existing) {
@@ -33,7 +40,7 @@ async function createReflection(reflectionData) {
       totalCount,
     );
 
-    // Attach any newly earned badges to the response so the frontend can toast them
+    // Attach any newly earned badges so the frontend can toast them
     reflection._newBadges = [...streakResult.newBadges, ...reflectionBadges];
   } catch (gamificationErr) {
     console.error(

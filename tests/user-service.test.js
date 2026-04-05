@@ -11,6 +11,11 @@ jest.mock("../models/User");
 jest.mock("bcrypt");
 jest.mock("crypto");
 jest.mock("jsonwebtoken");
+jest.mock("../services/badge-service", () => ({
+  onUserJoined: jest.fn().mockResolvedValue([]),
+}));
+
+const badgeService = require("../services/badge-service");
 
 describe("User Service", () => {
   beforeEach(() => {
@@ -35,7 +40,7 @@ describe("User Service", () => {
       bcrypt.hash.mockResolvedValue("hashedpwd");
       crypto.randomBytes.mockReturnValue({ toString: () => "token123" });
       const mockSave = jest.fn().mockResolvedValue(true);
-      User.mockImplementation(() => ({ save: mockSave }));
+      User.mockImplementation(() => ({ _id: "u1", save: mockSave }));
 
       const userData = {
         email: "test@example.com",
@@ -48,6 +53,25 @@ describe("User Service", () => {
       expect(result.message).toContain("User test successfully registered");
       expect(result.verificationToken).toBe("token123");
       expect(mockSave).toHaveBeenCalled();
+      expect(badgeService.onUserJoined).toHaveBeenCalledWith("u1");
+    });
+
+    test("should still succeed if badge service throws", async () => {
+      bcrypt.hash.mockResolvedValue("hashedpwd");
+      crypto.randomBytes.mockReturnValue({ toString: () => "token123" });
+      const mockSave = jest.fn().mockResolvedValue(true);
+      User.mockImplementation(() => ({ _id: "u1", save: mockSave }));
+      badgeService.onUserJoined.mockRejectedValueOnce(new Error("DB down"));
+
+      const userData = {
+        email: "test@example.com",
+        password: "123456",
+        password2: "123456",
+      };
+
+      // Should not throw — badge failure is non-fatal
+      const result = await userService.registerUser(userData);
+      expect(result.message).toContain("successfully registered");
     });
 
     test("should throw error if email already registered", async () => {
