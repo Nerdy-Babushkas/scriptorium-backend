@@ -1,9 +1,14 @@
-// tests/reflection-service.test.js
-
 const Reflection = require("../models/Reflection");
 const reflectionService = require("../services/reflection-service");
 
+// Mock dependencies used inside the service
 jest.mock("../models/Reflection");
+jest.mock("../services/badge-service", () => ({
+  onReflectionCreated: jest.fn().mockResolvedValue([]),
+}));
+jest.mock("../services/streak-service", () => ({
+  recordActivity: jest.fn().mockResolvedValue({ newBadges: [] }),
+}));
 
 describe("Reflection Service", () => {
   beforeEach(() => {
@@ -13,7 +18,7 @@ describe("Reflection Service", () => {
   // ================= CREATE REFLECTION =================
   describe("createReflection", () => {
     test("throws if reflection already exists", async () => {
-      Reflection.findOne.mockResolvedValue(true); // pretend a duplicate exists
+      Reflection.findOne.mockResolvedValue(true);
 
       await expect(
         reflectionService.createReflection({ user: "u1", item: "i1" }),
@@ -22,20 +27,30 @@ describe("Reflection Service", () => {
 
     test("creates a new reflection", async () => {
       Reflection.findOne.mockResolvedValue(null);
+      Reflection.countDocuments.mockResolvedValue(1);
 
-      const mockSave = jest.fn().mockResolvedValue({
+      const savedReflection = {
         _id: "r1",
         user: "u1",
         item: "i1",
+        text: "My reflection",
+      };
+
+      const mockSave = jest.fn().mockResolvedValue(savedReflection);
+
+      Reflection.mockImplementation(() => ({
+        save: mockSave,
+      }));
+
+      const result = await reflectionService.createReflection({
+        user: "u1",
+        item: "i1",
+        text: "My reflection",
       });
 
-      Reflection.mockImplementation(() => ({ save: mockSave }));
-
-      const reflectionData = { user: "u1", item: "i1", text: "My reflection" };
-      const result = await reflectionService.createReflection(reflectionData);
-
-      expect(result._id).toBe("r1");
       expect(mockSave).toHaveBeenCalled();
+      expect(result._id).toBe("r1");
+      expect(result).toMatchObject(savedReflection);
     });
   });
 
@@ -44,6 +59,7 @@ describe("Reflection Service", () => {
     test("returns sorted reflections for a user", async () => {
       const reflections = [{ _id: "r1" }, { _id: "r2" }];
       const sortMock = jest.fn().mockResolvedValue(reflections);
+
       Reflection.find.mockReturnValue({ sort: sortMock });
 
       const result = await reflectionService.getUserReflections("u1");
@@ -59,6 +75,7 @@ describe("Reflection Service", () => {
     test("returns sorted reflections for an item", async () => {
       const reflections = [{ _id: "r3" }];
       const sortMock = jest.fn().mockResolvedValue(reflections);
+
       Reflection.find.mockReturnValue({ sort: sortMock });
 
       const result = await reflectionService.getReflectionsByItem(
@@ -90,6 +107,7 @@ describe("Reflection Service", () => {
       Reflection.findById.mockResolvedValue(reflection);
 
       const result = await reflectionService.getReflectionById("r1");
+
       expect(result).toBe(reflection);
     });
   });
@@ -105,8 +123,15 @@ describe("Reflection Service", () => {
     });
 
     test("updates and saves the reflection", async () => {
-      const mockSave = jest.fn().mockResolvedValue({ _id: "r1", text: "New" });
-      const reflection = { _id: "r1", text: "Old", save: mockSave };
+      const updated = { _id: "r1", text: "New" };
+      const mockSave = jest.fn().mockResolvedValue(updated);
+
+      const reflection = {
+        _id: "r1",
+        text: "Old",
+        save: mockSave,
+      };
+
       Reflection.findById.mockResolvedValue(reflection);
 
       const result = await reflectionService.updateReflection("r1", {
@@ -115,7 +140,7 @@ describe("Reflection Service", () => {
 
       expect(reflection.text).toBe("New");
       expect(mockSave).toHaveBeenCalled();
-      expect(result.text).toBe("New");
+      expect(result).toBe(updated);
     });
   });
 

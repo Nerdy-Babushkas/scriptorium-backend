@@ -16,8 +16,7 @@ async function createReflection(reflectionData) {
     throw new Error("Reflection already exists for this item and date");
   }
 
-  const reflection = new Reflection(reflectionData);
-  await reflection.save();
+  const reflection = await new Reflection(reflectionData).save();
 
   // ── Gamification hooks ────────────────────────────────────────────────────
   // Run in parallel — don't let a badge/streak error break the core action.
