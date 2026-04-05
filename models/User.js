@@ -20,8 +20,10 @@ const userSchema = new mongoose.Schema(
     bookshelves: {
       type: [bookshelfSchema],
       default: [
-        { name: "favorites", books: [] },
         { name: "wishlist", books: [] },
+        { name: "reading", books: [] },
+        { name: "finished", books: [] },
+        { name: "favorites", books: [] },
       ],
     },
 
@@ -29,8 +31,9 @@ const userSchema = new mongoose.Schema(
     musicShelves: {
       type: [musicShelfSchema],
       default: [
+        { name: "listening", tracks: [] },
+        { name: "finished", tracks: [] },
         { name: "favorites", tracks: [] },
-        { name: "wishlist", tracks: [] },
       ],
     },
 
@@ -38,8 +41,10 @@ const userSchema = new mongoose.Schema(
     movieshelves: {
       type: [movieshelfSchema],
       default: [
-        { name: "favorites", movies: [] },
         { name: "watchlist", movies: [] },
+        { name: "watching", movies: [] },
+        { name: "watched", movies: [] },
+        { name: "favorites", movies: [] },
       ],
     },
 
