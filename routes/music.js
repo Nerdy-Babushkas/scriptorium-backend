@@ -20,7 +20,7 @@ router.get("/search", async (req, res) => {
 
   try {
     const currentPage = Number(page);
-    const pageLimit = Number(limit);
+    const pageLimit = Math.min(Number(limit), 100);
     const offset = (currentPage - 1) * pageLimit;
 
     const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(
@@ -60,7 +60,11 @@ router.get("/search", async (req, res) => {
         };
       }) || [];
 
-    res.json({ tracks });
+    res.json({
+      totalResults: response.data.count || 0,
+      page: currentPage,
+      tracks,
+    });
   } catch (err) {
     console.error("MusicBrainz API error:", err.message);
     res.status(500).json({ message: "Error fetching music from MusicBrainz" });
@@ -192,7 +196,7 @@ router.get("/advanced/search", async (req, res) => {
     }
 
     const currentPage = Number(page);
-    const pageLimit = Number(limit);
+    const pageLimit = Math.min(Number(limit), 100);
     const offset = (currentPage - 1) * pageLimit;
 
     const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(

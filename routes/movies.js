@@ -9,7 +9,7 @@ const movieService = require("../services/movie-service");
 // ================= SEARCH OMDb =================
 // =====================================================
 router.get("/search", async (req, res) => {
-  const query = req.query.q;
+  const { q: query, page = 1 } = req.query;
 
   if (!query) {
     return res
@@ -19,9 +19,7 @@ router.get("/search", async (req, res) => {
 
   try {
     const apiKey = process.env.OMDB_API_KEY;
-    const url = `https://www.omdbapi.com/?s=${encodeURIComponent(
-      query,
-    )}&apikey=${apiKey}`;
+    const url = `https://www.omdbapi.com/?s=${encodeURIComponent(query)}&page=${page}&apikey=${apiKey}`;
 
     const response = await axios.get(url);
 
@@ -37,7 +35,11 @@ router.get("/search", async (req, res) => {
       type: item.Type,
     }));
 
-    res.json({ movies });
+    res.json({
+      totalResults: Number(response.data.totalResults) || 0,
+      page: Number(page),
+      movies,
+    });
   } catch (err) {
     console.error("OMDb API error:", err.message);
     res.status(500).json({ message: "Error fetching movies from OMDb API" });
@@ -191,7 +193,6 @@ router.get("/advanced/search", async (req, res) => {
       searchTerm,
     )}&page=${page}${type ? `&type=${type}` : ""}${year ? `&y=${year}` : ""}`;
 
-    console.log("OMDb search URL:", searchUrl);
     const response = await axios.get(searchUrl);
 
     if (response.data.Response === "False") {
