@@ -24,5 +24,6 @@ router.use("/recommendations", recommendationsRoutes);
 router.use("/streaks", streakRoutes);
 router.use("/badges", badgesRoutes);
 router.use("/yarns", require("./yarns"));
+router.use("/avatars", require("./avatars"));
 
 module.exports = router;
