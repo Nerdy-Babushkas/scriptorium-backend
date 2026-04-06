@@ -130,4 +130,47 @@ router.patch("/account/password", async (req, res) => {
   }
 });
 
+// ================= TIPS =================
+
+// GET /api/user/tips
+// Returns seenTips array + tipsDisabled flag.
+// Frontend checks tipsDisabled first — if true, skip all tips immediately.
+router.get("/tips", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+    const profile = await userService.getTipsState(user._id);
+    res.json(profile);
+  } catch (err) {
+    res.status(401).json({ message: err.message });
+  }
+});
+
+// POST /api/user/tips/disable
+// Body: { "disabled": true }  — pass false to re-enable tips
+router.post("/tips/disable", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+    const disabled = req.body.disabled !== false; // default true if omitted
+    const result = await userService.setTipsDisabled(user._id, disabled);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// POST /api/user/tips/seen
+// Body: { "tipId": "room-intro" }
+// Marks a tip as seen. Idempotent — safe to call multiple times.
+router.post("/tips/seen", async (req, res) => {
+  try {
+    const user = userService.getUserFromToken(req);
+    const { tipId } = req.body;
+    if (!tipId) return res.status(400).json({ message: "tipId is required" });
+    await userService.markTipSeen(user._id, tipId);
+    res.json({ ok: true, tipId });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 module.exports = router;

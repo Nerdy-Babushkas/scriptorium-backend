@@ -66,6 +66,12 @@ const userSchema = new mongoose.Schema(
     rooms: { type: [Object], default: [] },
     media_placements: { type: [Object], default: [] },
 
+    // ================= TIPS =================
+    // IDs of tips the user has already dismissed.
+    // Stored as strings so new tips can be added without migrations.
+    seenTips: { type: [String], default: [] },
+    tipsDisabled: { type: Boolean, default: false },
+
     last_login: Date,
     ai_info: { type: Boolean, default: false },
   },
