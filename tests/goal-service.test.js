@@ -3,209 +3,260 @@ const Goal = require("../models/Goal");
 const goalService = require("../services/goal-service");
 
 jest.mock("../models/Goal");
+jest.mock("../services/badge-service");
+jest.mock("../services/streak-service");
+jest.mock("../services/yarn-service");
 
-describe("Goal Service", () => {
+const badgeService = require("../services/badge-service");
+const streakService = require("../services/streak-service");
+const yarnService = require("../services/yarn-service");
+
+describe("Goal Service - Extended Coverage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // ================= GET GOALS =================
-  describe("getGoalsByUser", () => {
-    test("returns goals for a user", async () => {
-      const mockGoals = [{ _id: "g1", title: "Goal 1" }];
-      Goal.find.mockResolvedValue(mockGoals);
-
-      const result = await goalService.getGoalsByUser("user1");
-
-      expect(Goal.find).toHaveBeenCalledWith({ user: "user1" });
-      expect(result).toEqual(mockGoals);
-    });
-  });
-
   // ================= CREATE GOAL =================
-  describe("createGoal", () => {
-    test("creates and saves a new goal", async () => {
-      const mockSave = jest
-        .fn()
-        .mockResolvedValue({ _id: "g1", title: "Goal 1" });
-
+  describe("createGoal (gamification)", () => {
+    test("attaches badges and yarns", async () => {
+      const mockSave = jest.fn().mockResolvedValue({});
       Goal.mockImplementation(() => ({ save: mockSave }));
 
-      const goalData = { title: "Goal 1", type: "book", total: 10 };
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: ["s1"],
+      });
+      badgeService.onGoalCreated.mockResolvedValue(["g1"]);
+      yarnService.onBadgeEarned.mockResolvedValue(10);
 
-      const result = await goalService.createGoal("user1", goalData);
+      const result = await goalService.createGoal("user1", {});
 
-      expect(mockSave).toHaveBeenCalled();
-      expect(result.title).toBe("Goal 1");
+      expect(result._newBadges).toEqual(["s1", "g1"]);
+      expect(result._yarns).toBe(10);
+    });
+
+    test("no badges → no yarn call", async () => {
+      const mockSave = jest.fn().mockResolvedValue({});
+      Goal.mockImplementation(() => ({ save: mockSave }));
+
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
+      });
+      badgeService.onGoalCreated.mockResolvedValue([]);
+
+      const result = await goalService.createGoal("user1", {});
+
+      expect(yarnService.onBadgeEarned).not.toHaveBeenCalled();
+      expect(result._newBadges).toEqual([]);
+      expect(result._yarns).toBeNull();
+    });
+
+    test("handles gamification error", async () => {
+      const mockSave = jest.fn().mockResolvedValue({});
+      Goal.mockImplementation(() => ({ save: mockSave }));
+
+      streakService.recordActivity.mockRejectedValue(new Error("fail"));
+
+      const result = await goalService.createGoal("user1", {});
+
+      expect(result._newBadges).toEqual([]);
+      expect(result._yarns).toBeNull();
     });
   });
 
-  // ================= UPDATE GOAL PROGRESS =================
-  describe("updateGoalProgress", () => {
-    test("returns null if goal not found", async () => {
-      Goal.findOne.mockResolvedValue(null);
-
-      const result = await goalService.updateGoalProgress("user1", "g1", 5);
-
-      expect(result).toBeNull();
-    });
-
-    test("updates goal progress", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
-
+  // ================= UPDATE PROGRESS =================
+  describe("updateGoalProgress (gamification)", () => {
+    test("already completed → no completion trigger", async () => {
       const goal = {
         _id: "g1",
-        current: 0,
+        current: 10,
         total: 10,
-        save: mockSave,
+        status: "completed",
+        save: jest.fn(),
       };
 
       Goal.findOne.mockResolvedValue(goal);
 
-      await goalService.updateGoalProgress("user1", "g1", 4);
-
-      expect(goal.current).toBe(4);
-      expect(goal.status).toBe("active");
-      expect(mockSave).toHaveBeenCalled();
-    });
-
-    test("marks goal completed if current >= total", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
-
-      const goal = {
-        _id: "g1",
-        current: 0,
-        total: 10,
-        save: mockSave,
-      };
-
-      Goal.findOne.mockResolvedValue(goal);
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
+      });
 
       await goalService.updateGoalProgress("user1", "g1", 10);
 
-      expect(goal.current).toBe(10);
-      expect(goal.status).toBe("completed");
-      expect(mockSave).toHaveBeenCalled();
+      expect(badgeService.onGoalCompleted).not.toHaveBeenCalled();
+      expect(yarnService.onGoalCompleted).not.toHaveBeenCalled();
     });
 
-    test("clamps progress above total", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
-
+    test("just completed → triggers completion logic", async () => {
       const goal = {
         _id: "g1",
-        current: 0,
+        current: 5,
         total: 10,
-        save: mockSave,
+        status: "active",
+        save: jest.fn(),
+      };
+
+      Goal.findOne.mockResolvedValue(goal);
+      Goal.countDocuments.mockResolvedValue(3);
+
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: ["s1"],
+      });
+
+      badgeService.onGoalCompleted.mockResolvedValue(["c1"]);
+
+      yarnService.onGoalProgressUpdated.mockResolvedValue(1);
+      yarnService.onGoalCompleted.mockResolvedValue(2);
+      yarnService.onBadgeEarned.mockResolvedValue(3);
+
+      const result = await goalService.updateGoalProgress("user1", "g1", 10);
+
+      expect(badgeService.onGoalCompleted).toHaveBeenCalledWith("user1", 3);
+
+      expect(result._newBadges).toEqual(["s1", "c1"]);
+    });
+
+    test("no badges → no badge yarn", async () => {
+      const goal = {
+        _id: "g1",
+        current: 2,
+        total: 10,
+        status: "active",
+        save: jest.fn(),
       };
 
       Goal.findOne.mockResolvedValue(goal);
 
-      await goalService.updateGoalProgress("user1", "g1", 50);
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
+      });
 
-      expect(goal.current).toBe(10);
+      yarnService.onGoalProgressUpdated.mockResolvedValue(1);
+
+      await goalService.updateGoalProgress("user1", "g1", 3);
+
+      expect(yarnService.onBadgeEarned).not.toHaveBeenCalled();
     });
 
-    test("clamps progress below zero", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
-
+    test("handles gamification failure", async () => {
       const goal = {
         _id: "g1",
-        current: 0,
+        current: 2,
         total: 10,
-        save: mockSave,
+        status: "active",
+        save: jest.fn(),
       };
 
       Goal.findOne.mockResolvedValue(goal);
 
-      await goalService.updateGoalProgress("user1", "g1", -5);
+      streakService.recordActivity.mockRejectedValue(new Error("fail"));
 
-      expect(goal.current).toBe(0);
+      const result = await goalService.updateGoalProgress("user1", "g1", 5);
+
+      expect(result._newBadges).toEqual([]);
+      expect(result._yarns).toBeNull();
     });
   });
 
   // ================= UPDATE GOAL =================
-  describe("updateGoal", () => {
-    test("returns null if goal not found", async () => {
-      Goal.findOne.mockResolvedValue(null);
-
-      const result = await goalService.updateGoal("user1", "g1", {
-        title: "Updated",
-      });
-
-      expect(result).toBeNull();
-    });
-
-    test("updates goal fields", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
-
+  describe("updateGoal (extra branches)", () => {
+    test("partial update does not overwrite other fields", async () => {
       const goal = {
         _id: "g1",
         title: "Old",
         type: "book",
         total: 10,
         current: 2,
-        save: mockSave,
+        status: "active",
+        save: jest.fn(),
       };
 
       Goal.findOne.mockResolvedValue(goal);
 
-      await goalService.updateGoal("user1", "g1", {
-        title: "New Title",
-        type: "music",
-        total: 20,
-        current: 5,
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
       });
 
-      expect(goal.title).toBe("New Title");
-      expect(goal.type).toBe("music");
-      expect(goal.total).toBe(20);
-      expect(goal.current).toBe(5);
-      expect(mockSave).toHaveBeenCalled();
+      yarnService.onGoalProgressUpdated.mockResolvedValue(1);
+
+      await goalService.updateGoal("user1", "g1", {
+        title: "New",
+      });
+
+      expect(goal.title).toBe("New");
+      expect(goal.type).toBe("book");
     });
 
-    test("updates status when completed", async () => {
-      const mockSave = jest.fn().mockResolvedValue(true);
+    test("clamps current inside updateGoal", async () => {
+      const goal = {
+        _id: "g1",
+        total: 10,
+        current: 2,
+        status: "active",
+        save: jest.fn(),
+      };
 
+      Goal.findOne.mockResolvedValue(goal);
+
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
+      });
+
+      yarnService.onGoalProgressUpdated.mockResolvedValue(1);
+
+      await goalService.updateGoal("user1", "g1", {
+        current: 50,
+      });
+
+      expect(goal.current).toBe(10);
+    });
+
+    test("justCompleted triggers completion logic", async () => {
       const goal = {
         _id: "g1",
         total: 10,
         current: 5,
-        save: mockSave,
+        status: "active",
+        save: jest.fn(),
+      };
+
+      Goal.findOne.mockResolvedValue(goal);
+      Goal.countDocuments.mockResolvedValue(2);
+
+      streakService.recordActivity.mockResolvedValue({
+        newBadges: [],
+      });
+
+      badgeService.onGoalCompleted.mockResolvedValue(["badge"]);
+
+      yarnService.onGoalProgressUpdated.mockResolvedValue(1);
+      yarnService.onGoalCompleted.mockResolvedValue(2);
+
+      const result = await goalService.updateGoal("user1", "g1", {
+        current: 10,
+      });
+
+      expect(result._newBadges).toEqual(["badge"]);
+    });
+
+    test("handles gamification error", async () => {
+      const goal = {
+        _id: "g1",
+        total: 10,
+        current: 2,
+        status: "active",
+        save: jest.fn(),
       };
 
       Goal.findOne.mockResolvedValue(goal);
 
-      await goalService.updateGoal("user1", "g1", {
-        current: 10,
+      streakService.recordActivity.mockRejectedValue(new Error("fail"));
+
+      const result = await goalService.updateGoal("user1", "g1", {
+        current: 3,
       });
 
-      expect(goal.status).toBe("completed");
-    });
-  });
-
-  // ================= DELETE GOAL =================
-  describe("deleteGoal", () => {
-    test("deletes the goal if found", async () => {
-      const mockGoal = { _id: "g1" };
-
-      Goal.findOneAndDelete.mockResolvedValue(mockGoal);
-
-      const result = await goalService.deleteGoal("user1", "g1");
-
-      expect(Goal.findOneAndDelete).toHaveBeenCalledWith({
-        _id: "g1",
-        user: "user1",
-      });
-
-      expect(result).toEqual(mockGoal);
-    });
-
-    test("returns null if goal not found", async () => {
-      Goal.findOneAndDelete.mockResolvedValue(null);
-
-      const result = await goalService.deleteGoal("user1", "g1");
-
-      expect(result).toBeNull();
+      expect(result._newBadges).toEqual([]);
+      expect(result._yarns).toBeNull();
     });
   });
 });

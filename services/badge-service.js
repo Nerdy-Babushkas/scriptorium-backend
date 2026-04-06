@@ -1,4 +1,5 @@
 const Badge = require("../models/Badge");
+const yarnService = require("./yarn-service");
 
 // ─── CATALOGUE ────────────────────────────────────────────────────────────────
 // All possible badges. key must be unique across the whole catalogue.
@@ -255,7 +256,16 @@ async function onGoalCompleted(userId, totalCompletedGoals) {
 
 async function onUserJoined(userId) {
   const b = await awardIfNew(userId, "joined");
-  return b ? [b] : [];
+  if (!b) return [];
+
+  // Award yarn for the joined badge — non-fatal if it fails
+  try {
+    await yarnService.onBadgeEarned(userId, 1);
+  } catch (err) {
+    console.error("Yarn award failed on join (non-fatal):", err.message);
+  }
+
+  return [b];
 }
 
 // ─── QUERY ────────────────────────────────────────────────────────────────────

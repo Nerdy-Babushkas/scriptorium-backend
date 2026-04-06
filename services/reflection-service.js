@@ -2,12 +2,11 @@
 const Reflection = require("../models/Reflection");
 const badgeService = require("./badge-service");
 const streakService = require("./streak-service");
+const yarnService = require("./yarn-service");
 
 // ================= CREATE REFLECTION =================
 async function createReflection(reflectionData) {
   // Avoid duplicate reflections for same user + item on the same calendar day.
-  // Match on a UTC-day window rather than an exact timestamp, so two saves
-  // within the same day are caught even if milliseconds differ.
   const dayStart = new Date(reflectionData.date || Date.now());
   dayStart.setUTCHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
@@ -26,7 +25,6 @@ async function createReflection(reflectionData) {
   const reflection = await new Reflection(reflectionData).save();
 
   // ── Gamification hooks ────────────────────────────────────────────────────
-  // Run in parallel — don't let a badge/streak error break the core action.
   try {
     const userId = reflectionData.user;
 
@@ -40,14 +38,25 @@ async function createReflection(reflectionData) {
       totalCount,
     );
 
-    // Attach any newly earned badges so the frontend can toast them
-    reflection._newBadges = [...streakResult.newBadges, ...reflectionBadges];
+    const allNewBadges = [...streakResult.newBadges, ...reflectionBadges];
+
+    // ── Yarn rewards ──────────────────────────────────────────────────────
+    const [yarns] = await Promise.all([
+      yarnService.onReflectionWritten(userId),
+      allNewBadges.length
+        ? yarnService.onBadgeEarned(userId, allNewBadges.length)
+        : Promise.resolve(null),
+    ]);
+
+    reflection._newBadges = allNewBadges;
+    reflection._yarns = yarns;
   } catch (gamificationErr) {
     console.error(
       "Gamification hook failed (non-fatal):",
       gamificationErr.message,
     );
     reflection._newBadges = [];
+    reflection._yarns = null;
   }
 
   return reflection;
