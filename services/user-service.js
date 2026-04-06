@@ -198,6 +198,40 @@ module.exports.updatePassword = async function (
   return { message: "Password updated successfully" };
 };
 
+// DISABLE / ENABLE ALL TIPS
+module.exports.setTipsDisabled = async function (userId, disabled) {
+  await User.findByIdAndUpdate(userId, { tipsDisabled: Boolean(disabled) });
+  return { tipsDisabled: Boolean(disabled) };
+};
+
+// GET FULL TIPS STATE (seen IDs + disabled flag) — used by GET /api/user/tips
+module.exports.getTipsState = async function (userId) {
+  const user = await User.findById(userId)
+    .select("seenTips tipsDisabled")
+    .lean();
+  if (!user) throw new Error("User not found");
+  return {
+    seenTips: user.seenTips || [],
+    tipsDisabled: user.tipsDisabled || false,
+  };
+};
+
+// GET SEEN TIPS
+module.exports.getSeenTips = async function (userId) {
+  const user = await User.findById(userId).select("seenTips").lean();
+  if (!user) throw new Error("User not found");
+  return user.seenTips || [];
+};
+
+// MARK TIP AS SEEN
+// tipId is a short string like "room-intro" or "reflection-guide".
+// Uses $addToSet so re-sending the same id is safe and idempotent.
+module.exports.markTipSeen = async function (userId, tipId) {
+  if (!tipId || typeof tipId !== "string") throw new Error("tipId is required");
+  await User.findByIdAndUpdate(userId, { $addToSet: { seenTips: tipId } });
+  return { ok: true };
+};
+
 // GET USER PROFILE
 module.exports.getUserProfile = async function (userId) {
   const user = await User.findById(userId);
