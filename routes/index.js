@@ -23,5 +23,6 @@ router.use("/movies", movieRoutes);
 router.use("/recommendations", recommendationsRoutes);
 router.use("/streaks", streakRoutes);
 router.use("/badges", badgesRoutes);
+router.use("/yarns", require("./yarns"));
 
 module.exports = router;

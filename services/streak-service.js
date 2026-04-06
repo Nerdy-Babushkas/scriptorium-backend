@@ -1,9 +1,10 @@
+// services/streak-service.js
 const Streak = require("../models/Streak");
 const badgeService = require("./badge-service");
+const yarnService = require("./yarn-service");
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-// Strip time from a date so we only compare calendar days (UTC).
 function toUTCDay(date) {
   const d = new Date(date);
   d.setUTCHours(0, 0, 0, 0);
@@ -11,14 +12,11 @@ function toUTCDay(date) {
 }
 
 function dayDiff(a, b) {
-  // Returns number of whole UTC days between two dates (a - b).
   const msPerDay = 1000 * 60 * 60 * 24;
   return Math.round((toUTCDay(a) - toUTCDay(b)) / msPerDay);
 }
 
 // ─── CORE: record activity ─────────────────────────────────────────────────────
-// Call this whenever the user does *anything* meaningful in the app.
-// Returns { streak, newBadges } so the caller can surface badges to the frontend.
 
 async function recordActivity(userId) {
   const today = toUTCDay(new Date());
@@ -26,7 +24,6 @@ async function recordActivity(userId) {
   let streak = await Streak.findOne({ user: userId });
 
   if (!streak) {
-    // First ever activity for this user
     streak = new Streak({
       user: userId,
       current: 1,
@@ -37,32 +34,35 @@ async function recordActivity(userId) {
     });
     await streak.save();
     const newBadges = await badgeService.onStreakUpdate(userId, 1, 1);
+    // No milestone yarn on day 1 (milestones are every 7 days)
     return { streak, newBadges };
   }
 
   const diff = dayDiff(today, streak.lastActiveDate);
 
   if (diff === 0) {
-    // Already recorded activity today — nothing to change
+    // Already recorded today — nothing changes
     return { streak, newBadges: [] };
   }
 
+  let hitMilestone = false;
+
   if (diff === 1) {
-    // Consecutive day — extend the streak
     streak.current += 1;
     streak.totalActiveDays += 1;
-
-    // Award one grace day for every completed 7-day block
     if (streak.current % 7 === 0) {
       streak.graceDaysAvailable += 1;
+      hitMilestone = true;
     }
   } else if (diff === 2 && streak.graceDaysAvailable > 0) {
-    // Missed exactly one day but has a grace day — spend it silently
     streak.graceDaysAvailable -= 1;
     streak.current += 1;
     streak.totalActiveDays += 1;
+    if (streak.current % 7 === 0) {
+      hitMilestone = true;
+    }
   } else {
-    // Streak broken — reset
+    // Streak broken
     streak.current = 1;
     streak.totalActiveDays += 1;
   }
@@ -77,6 +77,17 @@ async function recordActivity(userId) {
     streak.totalActiveDays,
   );
 
+  // ── Yarn rewards ────────────────────────────────────────────────────────────
+  try {
+    const yarnOps = [];
+    if (hitMilestone) yarnOps.push(yarnService.onStreakMilestone(userId));
+    if (newBadges.length)
+      yarnOps.push(yarnService.onBadgeEarned(userId, newBadges.length));
+    if (yarnOps.length) await Promise.all(yarnOps);
+  } catch (yarnErr) {
+    console.error("Yarn award failed in streak (non-fatal):", yarnErr.message);
+  }
+
   return { streak, newBadges };
 }
 
@@ -85,7 +96,6 @@ async function recordActivity(userId) {
 async function getStreak(userId) {
   const streak = await Streak.findOne({ user: userId });
   if (!streak) {
-    // Return a zeroed-out object so the frontend never gets a 404 on first load
     return {
       current: 0,
       longest: 0,
@@ -95,8 +105,6 @@ async function getStreak(userId) {
     };
   }
 
-  // If the user hasn't been active today or yesterday (and has no grace),
-  // their current streak is already stale — reset it lazily on read.
   const diff = streak.lastActiveDate
     ? dayDiff(new Date(), streak.lastActiveDate)
     : 99;
