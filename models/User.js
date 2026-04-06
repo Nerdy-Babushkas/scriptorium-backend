@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema(
       ],
     },
 
+    // ================= AVATAR =================
+    avatarKey: { type: String, default: "hatchling" },
+    unlockedAvatars: { type: [String], default: ["hatchling"] },
+
     // ================= GAMIFICATION =================
     // Badges and streaks live in their own collections (Badge, Streak).
     // These counters here are cheap denormalised totals used only for badge
