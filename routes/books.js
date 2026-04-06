@@ -22,12 +22,12 @@ router.get("/search", async (req, res) => {
     const apiKey = process.env.BOOKS_API;
 
     const currentPage = Number(page);
-    const pageLimit = Number(limit);
+    const pageLimit = Math.min(Number(limit), 40);
     const startIndex = (currentPage - 1) * pageLimit;
 
     const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
       q,
-    )}&maxResults=${limit}&startIndex=${startIndex}&key=${apiKey}`;
+    )}&maxResults=${pageLimit}&startIndex=${startIndex}&key=${apiKey}`;
 
     const response = await axios.get(url);
 
@@ -50,7 +50,11 @@ router.get("/search", async (req, res) => {
         };
       }) || [];
 
-    res.json({ books });
+    res.json({
+      totalResults: response.data.totalItems || 0,
+      page: currentPage,
+      books,
+    });
   } catch (err) {
     console.error("Google Books API error:", err.message);
     res
