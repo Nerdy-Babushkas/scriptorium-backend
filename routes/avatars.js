@@ -10,7 +10,7 @@ const avatarService = require("../services/avatar-service");
 router.get("/", async (req, res) => {
   try {
     const user = getUserFromToken(req);
-    const state = await avatarService.getAvatarState(user._id);
+    const state = await avatarService.getAvatarState(user._id ?? user.id);
     res.json(state);
   } catch (err) {
     res.status(401).json({ message: err.message });
@@ -27,7 +27,7 @@ router.post("/unlock", async (req, res) => {
 
     if (!key) return res.status(400).json({ message: "key is required" });
 
-    const result = await avatarService.unlockAvatar(user._id, key);
+    const result = await avatarService.unlockAvatar(user._id ?? user.id, key);
     res.json({ message: `${key} unlocked`, ...result });
   } catch (err) {
     const status =
@@ -52,7 +52,7 @@ router.post("/equip", async (req, res) => {
 
     if (!key) return res.status(400).json({ message: "key is required" });
 
-    const result = await avatarService.equipAvatar(user._id, key);
+    const result = await avatarService.equipAvatar(user._id ?? user.id, key);
     res.json({ message: `${key} equipped`, ...result });
   } catch (err) {
     const status =
