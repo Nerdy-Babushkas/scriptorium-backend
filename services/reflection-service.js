@@ -6,22 +6,6 @@ const yarnService = require("./yarn-service");
 
 // ================= CREATE REFLECTION =================
 async function createReflection(reflectionData) {
-  // Avoid duplicate reflections for same user + item on the same calendar day.
-  const dayStart = new Date(reflectionData.date || Date.now());
-  dayStart.setUTCHours(0, 0, 0, 0);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-  const existing = await Reflection.findOne({
-    user: reflectionData.user,
-    item: reflectionData.item,
-    date: { $gte: dayStart, $lt: dayEnd },
-  });
-
-  if (existing) {
-    throw new Error("Reflection already exists for this item and date");
-  }
-
   const reflection = await new Reflection(reflectionData).save();
 
   // ── Gamification hooks ────────────────────────────────────────────────────
