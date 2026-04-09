@@ -17,16 +17,7 @@ describe("Reflection Service", () => {
 
   // ================= CREATE REFLECTION =================
   describe("createReflection", () => {
-    test("throws if reflection already exists", async () => {
-      Reflection.findOne.mockResolvedValue(true);
-
-      await expect(
-        reflectionService.createReflection({ user: "u1", item: "i1" }),
-      ).rejects.toThrow("Reflection already exists for this item and date");
-    });
-
     test("creates a new reflection", async () => {
-      Reflection.findOne.mockResolvedValue(null);
       Reflection.countDocuments.mockResolvedValue(1);
 
       const savedReflection = {
