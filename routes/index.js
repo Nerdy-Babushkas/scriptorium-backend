@@ -12,6 +12,7 @@ const movieRoutes = require("./movies");
 const recommendationsRoutes = require("./recommendations");
 const streakRoutes = require("./streaks");
 const badgesRoutes = require("./badges");
+const feedbackRoutes = require("./feedback");
 
 // Mount routes
 router.use("/user", userRoutes);
@@ -25,5 +26,6 @@ router.use("/streaks", streakRoutes);
 router.use("/badges", badgesRoutes);
 router.use("/yarns", require("./yarns"));
 router.use("/avatars", require("./avatars"));
+router.use("/feedback", feedbackRoutes);
 
 module.exports = router;
